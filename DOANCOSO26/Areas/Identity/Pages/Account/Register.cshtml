@@ -1,0 +1,99 @@
+﻿@page
+@model RegisterModel
+
+<section class="signup__section bluar__shape">
+    <div class="container">
+        <div class="row align-items-center justify-content-between">
+            <div class="col-xl-6 col-lg-6">
+                <div class="signup__boxes">
+                    <h4>ĐĂNG KÍ TÀI KHOẢN</h4>
+                    <p class="head__pra">Hãy trở thành thành viên của BusBus</p>
+
+                    @if (TempData["Message"] != null)
+                    {
+                        <div class="alert alert-info">@TempData["Message"]</div>
+                    }
+
+                    <form class="signup__form pt__40" id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
+                        <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+                        <div class="row g-4">
+                            <div class="col-lg-6">
+                                <div class="input__grp">
+                                    <label asp-for="Input.FullName">Họ tên</label>
+                                    <input asp-for="Input.FullName" type="text" placeholder="Nhập họ tên" class="input" />
+                                    <span asp-validation-for="Input.FullName" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-6">
+                                <div class="input__grp">
+                                    <label asp-for="Input.PhoneNumber">Số điện thoại</label>
+                                    <input asp-for="Input.PhoneNumber" type="text" class="input" placeholder="Nhập số điện thoại" />
+                                    <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-12">
+                                <div class="input__grp">
+                                    <label asp-for="Input.Email">Email</label>
+                                    <input asp-for="Input.Email" type="email" class="input" placeholder="Nhập email" />
+                                    <span asp-validation-for="Input.Email" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-12">
+                                <div class="input__grp">
+                                    <label asp-for="Input.Password" class="form-label">Mật khẩu</label>
+                                    <div class="form-group">
+                                        <input asp-for="Input.Password" id="password-field" type="password" class="form-control" placeholder="Nhập mật khẩu" />
+                                        <span asp-validation-for="Input.Password" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-12">
+                                <div class="input__grp">
+                                    <label asp-for="Input.ConfirmPassword" class="form-label">Xác nhận mật khẩu</label>
+                                    <div class="form-group">
+                                        <input asp-for="Input.ConfirmPassword" id="toggle-password2" class="form-control" type="password" placeholder="Nhập lại mật khẩu" />
+                                        <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <input asp-for="Input.Role" type="hidden" value="@DOANCOSO26.Models.Roles.Role_Customer" />
+
+                            <div class="col-lg-12">
+                                <div class="input__grp">
+                                    <p class="sign-up-label">
+                                        Đã có tài khoản?
+                                        <a class="sign-up-link" asp-area="Identity" asp-page="/Account/Login">Đăng nhập</a>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-12">
+                                <div class="input__grp mt-2">
+                                    <button type="submit" class="cmn__btn" id="registerSubmit">
+                                        <span>Đăng kí tài khoản</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-xl-5 col-lg-6">
+                <div class="signup__thumb">
+                    <img src="~/busjs/assets/img/signup/signup.png" alt="img" />
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

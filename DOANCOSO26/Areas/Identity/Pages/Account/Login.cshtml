@@ -1,0 +1,55 @@
+﻿@page
+@model LoginModel
+
+<section class="signup__section bluar__shape">
+    <div class="container">
+        <div class="row align-items-center justify-content-between">
+            <div class="col-xl-6 col-lg-6">
+                <div class="signup__boxes">
+                    <h4>
+                      ĐĂNG NHẬP
+                    </h4>
+                    <p class="head__pra mb__30">
+              Chào mừng trở lại
+                    </p>
+                    <form  class="form" id="account" method="post">
+                        <div class="row g-4">
+                            <div class="col-lg-12">
+                                <div class="input__grp">
+                                    <label for="email2">Enter Your Email ID</label>
+                                    <input type="email" id="email2"  asp-for="Input.Email" type="email" class="input" placeholder="email">
+                                </div>
+                            </div>
+                            <div class="col-lg-12">
+                                <div class="input__grp">
+                                    <label for="pass3">Enter Your Password</label>
+                                    <input type="text" id="pass3" placeholder="Your Password" asp-for="Input.Password" class="input" type="password">
+                                </div>
+                            </div>
+                            <a href="javascript:void(0)" class="forgot">
+                                Forgot Password?
+                            </a>
+                            <p class="sign-up-label">
+                                Don't have an account?<span><a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="forgot"> Sign up</a></span>
+                            </p>
+                            <div class="col-lg-12">
+                                <div class="input__grp">
+                                    <button type="submit" class="cmn__btn" id="login-submit" type="submit">
+                                        <span>
+                                            Sign In
+                                        </span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="col-xl-5 col-lg-6">
+                <div class="signup__thumb">
+                   <img src="~/busjs/assets/img/signup/signup.png" alt ="img">
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

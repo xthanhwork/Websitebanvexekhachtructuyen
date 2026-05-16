@@ -1,0 +1,2359 @@
+@model DOANCOSO26.Models.BusTrip
+@using DOANCOSO26.Models
+
+@functions {
+    private static int SeatOrderValue(string? seatNumber)
+    {
+        var digits = new string((seatNumber ?? string.Empty).Where(char.IsDigit).ToArray());
+        return int.TryParse(digits, out var number) ? number : int.MaxValue;
+    }
+}
+
+@{
+    var seatLayout = (Model.Seats ?? new List<DOANCOSO26.Models.Seat>())
+        .OrderBy(s => SeatOrderValue(s.SeatNumber))
+        .ThenBy(s => s.SeatNumber)
+        .ThenBy(s => s.Id)
+        .ToList();
+
+    var isSeatCoach = Model.Bus?.BusType == BusType.Standard;
+    var layoutName = isSeatCoach ? "Ghế ngồi" : "Giường nằm Limousine";
+    var firstFloorSeatCount = isSeatCoach ? seatLayout.Count : (int)Math.Ceiling(seatLayout.Count / 2.0);
+    var seatControlWidth = isSeatCoach ? "14%" : "10%";
+
+    var firstFloorSeats = seatLayout.Take(firstFloorSeatCount).ToList();
+    var secondFloorSeats = isSeatCoach ? new List<DOANCOSO26.Models.Seat>() : seatLayout.Skip(firstFloorSeatCount).ToList();
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<style>
+    :root {
+        --primary: #1e3a8a; /* Xanh đậm */
+        --primary-light: #3b82f6; /* Xanh biển */
+        --primary-lighter: #60a5fa; /* Xanh lam */
+        --primary-lightest: #93c5fd; /* Xanh nhạt */
+        --neutral-light: #e0f2fe;
+        --neutral-lighter: #f0f9ff;
+    }
+
+
+
+    .seat-coach-popup {
+        width: min(760px, 94vw);
+        max-height: 92vh;
+        padding: 20px;
+        border-radius: 16px;
+    }
+
+    .seat-coach-popup .popup-content {
+        max-height: calc(92vh - 95px);
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+
+    .seat-coach-popup .feature-card,
+    .seat-coach-popup .seat__linemain__wrapper > .d-flex {
+        display: none !important;
+    }
+
+    .standard-seat-shell {
+        max-width: 620px;
+        margin: 0 auto;
+        padding: 18px;
+        border-radius: 18px;
+        border: 1px solid #dbeafe;
+        background: #ffffff;
+        box-shadow: 0 12px 30px rgba(30, 58, 138, 0.08);
+    }
+
+    .seat-legend-inline {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin-bottom: 18px;
+        padding: 12px;
+        border-radius: 14px;
+        background: #eff6ff;
+    }
+
+    .seat-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 14px;
+        color: #111827;
+        font-weight: 600;
+    }
+
+    .legend-seat-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+    }
+
+    .legend-seat-icon.selected-icon { background: #2840BF; }
+    .legend-seat-icon.booked-icon { background: #ef4444; }
+    .legend-seat-icon.available-icon { background: #9ca3af; }
+
+    .standard-driver-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 18px;
+        color: #111827;
+        font-weight: 700;
+    }
+
+    .standard-driver-row .driver-icon {
+        font-size: 34px;
+        color: #6b7280;
+    }
+
+    .standard-driver-row .door-label {
+        padding: 8px 16px;
+        border-radius: 999px;
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+    }
+
+    .standard-seat-map {
+        display: grid;
+        grid-template-columns: repeat(2, 76px) 42px repeat(2, 76px);
+        gap: 14px 16px;
+        justify-content: center;
+        align-items: center;
+        padding: 14px 8px 18px;
+        border-radius: 18px;
+        background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+        border: 1px solid #e5eefc;
+    }
+
+    .seat-aisle {
+        min-height: 58px;
+        position: relative;
+    }
+
+    .seat-aisle::before {
+        content: '';
+        position: absolute;
+        top: 4px;
+        bottom: 4px;
+        left: 50%;
+        width: 1px;
+        background: linear-gradient(#dbeafe, #93c5fd, #dbeafe);
+        transform: translateX(-50%);
+    }
+
+    .standard-seat {
+        width: 76px;
+        height: 58px;
+        border-radius: 13px;
+        border: 1px solid #bfdbfe;
+        background: #eff6ff;
+        color: #1e3a8a;
+        font-weight: 800;
+        transition: all .18s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        flex-direction: column;
+        line-height: 1;
+    }
+
+    .standard-seat:hover:not(.booked):not(.empty) {
+        border-color: #2840BF;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 14px rgba(40, 64, 191, 0.18);
+    }
+
+    .standard-seat.selected {
+        background: #2840BF !important;
+        color: #fff !important;
+        border-color: #2840BF !important;
+    }
+
+    .standard-seat.booked {
+        background: #fee2e2 !important;
+        color: #b91c1c !important;
+        border-color: #fecaca !important;
+        cursor: not-allowed;
+        opacity: .78;
+    }
+
+    .standard-seat.empty {
+        visibility: hidden;
+        pointer-events: none;
+    }
+
+    .seat-inline-book-now {
+        display: none !important;
+    }
+
+    .seat-action-bar {
+        margin-top: 18px;
+        padding: 14px;
+        border-radius: 14px;
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .seat-action-bar .selected-seat-summary {
+        font-weight: 700;
+        color: #1e3a8a;
+    }
+
+    .seat-action-bar .btn-book-selected {
+        background: #2840BF;
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        padding: 10px 18px;
+        font-weight: 800;
+    }
+
+    .sleeper-seat-map {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(115px, 1fr));
+        gap: 16px;
+        justify-content: center;
+        align-items: stretch;
+        padding: 18px;
+        border-radius: 18px;
+        background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+        border: 1px solid #e5eefc;
+    }
+
+    .sleeper-seat {
+        min-height: 82px;
+        border-radius: 14px;
+        border: 1px solid #dbeafe;
+        background: #f1f5f9;
+        color: #1e3a8a;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all .18s ease;
+    }
+
+    .sleeper-seat i {
+        font-size: 30px;
+        color: #f15a24;
+    }
+
+    .sleeper-seat:hover:not(.booked) {
+        border-color: #2840BF;
+        transform: translateY(-1px);
+        box-shadow: 0 8px 18px rgba(40, 64, 191, 0.16);
+    }
+
+    .sleeper-seat.selected {
+        background: #2840BF !important;
+        color: #fff !important;
+        border-color: #2840BF !important;
+    }
+
+    .sleeper-seat.selected i {
+        color: #fff !important;
+    }
+
+    .sleeper-seat.booked {
+        background: #fee2e2 !important;
+        color: #b91c1c !important;
+        border-color: #fecaca !important;
+        cursor: not-allowed;
+        opacity: .75;
+    }
+
+    .sleeper-seat.booked i {
+        color: #ef4444 !important;
+    }
+
+    .sleeper-seat .seat-number {
+        font-size: 14px;
+        line-height: 1;
+    }
+
+    @@media (max-width: 576px) {
+        .sleeper-seat-map {
+            grid-template-columns: repeat(3, minmax(72px, 1fr));
+            gap: 10px;
+            padding: 12px;
+        }
+
+        .sleeper-seat {
+            min-height: 64px;
+            font-size: 12px;
+        }
+
+        .sleeper-seat i {
+            font-size: 22px;
+        }
+    }
+
+    @@media (max-width: 576px) {
+        .standard-seat-map {
+            grid-template-columns: repeat(2, 58px) 24px repeat(2, 58px);
+            gap: 10px 8px;
+        }
+
+        .standard-seat {
+            width: 58px;
+            height: 54px;
+            font-size: 12px;
+        }
+    }
+
+
+
+    /* Fix popup chọn ghế giường nằm bị hẹp/tràn: 3 hàng luôn nằm gọn trong khung */
+    #popup1:not(.seat-coach-popup) {
+        width: min(980px, 96vw) !important;
+        max-height: 92vh !important;
+        padding: 16px !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        box-sizing: border-box !important;
+    }
+
+    #popup2 {
+        width: min(980px, 96vw) !important;
+        max-height: 92vh !important;
+        padding: 16px !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        box-sizing: border-box !important;
+    }
+
+    #popup1:not(.seat-coach-popup) .popup-content,
+    #popup2 .popup-content {
+        width: 100% !important;
+        overflow-x: hidden !important;
+    }
+
+    #popup1:not(.seat-coach-popup) .popup-content > .row,
+    #popup2 .popup-content > .row {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        width: 100% !important;
+    }
+
+    #popup1:not(.seat-coach-popup) .popup-content > .row > .col-7,
+    #popup2 .popup-content > .row > .col-7 {
+        flex: 0 0 64% !important;
+        max-width: 64% !important;
+        width: 64% !important;
+        padding-left: 0 !important;
+        padding-right: 12px !important;
+    }
+
+    #popup1:not(.seat-coach-popup) .popup-content > .row > .col-5,
+    #popup2 .popup-content > .row > .col-5 {
+        flex: 0 0 36% !important;
+        max-width: 36% !important;
+        width: 36% !important;
+        padding-left: 12px !important;
+        padding-right: 0 !important;
+    }
+
+    #popup1:not(.seat-coach-popup) .common__filter__wrapper,
+    #popup2 .common__filter__wrapper {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow: visible !important;
+        box-sizing: border-box !important;
+    }
+
+    #popup1:not(.seat-coach-popup) .seat__linemain__wrapper,
+    #popup2 .seat__linemain__wrapper {
+        width: 100% !important;
+        overflow-x: hidden !important;
+    }
+
+    #popup1:not(.seat-coach-popup) .sleeper-seat-map,
+    #popup2 .sleeper-seat-map {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        width: 100% !important;
+        max-width: 540px !important;
+        margin: 0 auto !important;
+        gap: 14px !important;
+        padding: 16px !important;
+        box-sizing: border-box !important;
+    }
+
+    #popup1:not(.seat-coach-popup) .sleeper-seat,
+    #popup2 .sleeper-seat {
+        width: 100% !important;
+        min-width: 0 !important;
+        min-height: 74px !important;
+        box-sizing: border-box !important;
+        padding: 8px 6px !important;
+        white-space: nowrap !important;
+    }
+
+    #popup1:not(.seat-coach-popup) .sleeper-seat i,
+    #popup2 .sleeper-seat i {
+        font-size: 24px !important;
+    }
+
+    #popup1:not(.seat-coach-popup) .sleeper-seat .seat-number,
+    #popup2 .sleeper-seat .seat-number {
+        font-size: 13px !important;
+    }
+
+    @@media (max-width: 768px) {
+        #popup1:not(.seat-coach-popup),
+        #popup2 {
+            width: 96vw !important;
+            padding: 12px !important;
+        }
+
+        #popup1:not(.seat-coach-popup) .popup-content > .row > .col-7,
+        #popup1:not(.seat-coach-popup) .popup-content > .row > .col-5,
+        #popup2 .popup-content > .row > .col-7,
+        #popup2 .popup-content > .row > .col-5 {
+            flex: 0 0 100% !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        #popup1:not(.seat-coach-popup) .sleeper-seat-map,
+        #popup2 .sleeper-seat-map {
+            max-width: 100% !important;
+            gap: 10px !important;
+            padding: 12px !important;
+        }
+    }
+
+
+    .common__filter__wrapper {
+        background: #fff;
+        padding: 15px;
+        border-radius: 16px;
+        box-shadow: 0 8px 30px rgba(30, 58, 138, 0.1);
+        border: 1px solid var(--neutral-light);
+    }
+
+        .common__filter__wrapper img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: auto;
+        }
+
+    .hotelbooking__categoris__wrap {
+        padding: 30px; /* Compact padding */
+        margin: 0;
+        box-sizing: border-box;
+        transition: border-color 0.3s ease, transform 0.3s ease; /* Smooth effect */
+        /* Thêm bóng đổ đậm */
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3), 0 16px 32px rgba(0, 0, 0, 0.2);
+        /* Đậm hơn và rõ ràng */
+    }
+
+    .flight__onewaysection {
+        background-color: #f0f0f0; /* Thay đổi mã màu tùy ý */
+    }
+
+    .top-header {
+        background: var(--primary);
+        color: white;
+        margin: -15px -15px 20px -15px;
+        padding: 10px 10px;
+        border-radius: 16px 16px 0 0;
+    }
+
+    .promo__title {
+        font-size: 24px;
+        font-weight: 700;
+    }
+
+    .quick-stats {
+        display: flex;
+        gap: 20px;
+        font-size: 14px;
+    }
+
+    .route-details ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+        .route-details ul li {
+            padding: 8px 0;
+            border-bottom: 1px solid #ddd;
+            color: #2c3e50;
+            font-size: 15px;
+        }
+
+            .route-details ul li:last-child {
+                border-bottom: none;
+            }
+
+    .route-details h5 {
+        margin-bottom: 10px;
+    }
+
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .main-content {
+        background: white;
+        border-radius: 12px;
+    }
+
+    .quick-filters {
+        display: flex;
+        gap: 10px;
+        margin: 20px 0;
+        overflow-x: auto;
+        padding-bottom: 10px;
+    }
+
+    .quick-filter-btn {
+        padding: 8px 16px;
+        border: 1px solid var(--primary-lighter);
+        border-radius: 20px;
+        color: var(--primary);
+        background: white;
+        font-size: 14px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.3s;
+    }
+
+        .quick-filter-btn:hover,
+        .quick-filter-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+    .search__item {
+        margin: 25px 0;
+        border-bottom: 1px solid var(--neutral-light);
+        padding-bottom: 25px;
+    }
+
+    .section-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: var(--primary);
+        font-weight: 600;
+        margin-bottom: 15px;
+    }
+
+    .search-box {
+        position: relative;
+        margin-bottom: 20px;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 14px 45px 14px 18px;
+        border: 2px solid #93c5fd;
+        border-radius: 12px;
+        font-size: 15px;
+        transition: all 0.3s;
+    }
+
+
+        .search-input:focus {
+            border-color: var(--primary-lighter);
+            outline: none;
+        }
+
+    .search-icon {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--primary);
+    }
+
+    .feature-card {
+        background: var(--neutral-lighter);
+        border-radius: 12px;
+        padding: 15px;
+        margin: 15px 0;
+    }
+
+    .feature-title {
+        color: var(--primary);
+        font-weight: 600;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .feature-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+        .feature-list li {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 8px 0;
+            color: #444;
+        }
+
+            .feature-list li::before {
+                content: "✓";
+                color: var(--primary-light);
+                font-weight: bold;
+            }
+
+    .time-slot {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        border: 1px solid var(--neutral-light);
+        border-radius: 12px;
+        margin: 10px 0;
+        cursor: pointer;
+        transition: all 0.3s;
+        position: relative;
+    }
+
+        .time-slot:hover {
+            border-color: var(--primary-lighter);
+            background: var(--neutral-lighter);
+        }
+
+        .time-slot.popular {
+            background: var(--neutral-lighter);
+            border: 2px solid var(--primary-lighter);
+        }
+
+        .time-slot.selected {
+            border: 2px solid var(--primary);
+            background: var(--primary-lightest);
+        }
+
+    .seat-svg {
+        transition: all 0.3s ease;
+    }
+
+        .seat-svg.booked {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .seat-svg.available {
+            cursor: pointer;
+        }
+
+        .seat-svg.selected {
+            fill: var(--primary);
+        }
+
+    .time-info {
+        flex: 1;
+        margin-left: 15px;
+        display: flex;
+        align-items: center;
+    }
+
+    .bus-logo {
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        margin-right: 12px;
+    }
+
+    /* Điều chỉnh layout để chứa logo */
+
+    .time-title {
+        font-weight: 600;
+        color: var(--primary);
+    }
+
+    .time-meta {
+        display: flex;
+        gap: 15px;
+        font-size: 13px;
+        color: #666;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    .badge-blue {
+        background: var(--primary-lightest);
+        color: var(--primary);
+    }
+
+    .badge-light {
+        background: var(--neutral-lighter);
+        color: var(--primary);
+    }
+
+    .price-range {
+        margin: 25px 0;
+    }
+
+    .range-values {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+
+    .range-value {
+        text-align: center;
+    }
+
+    .range-amount {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--primary);
+    }
+
+    .range-label {
+        font-size: 12px;
+        color: #666;
+    }
+
+    .range-slider {
+        width: 100%;
+        height: 6px;
+        background: var(--neutral-light);
+        border-radius: 3px;
+        -webkit-appearance: none;
+    }
+
+        .range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+            .range-slider::-webkit-slider-thumb:hover {
+                transform: scale(1.1);
+            }
+
+    .bus-option {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        border: 1px solid var(--neutral-light);
+        border-radius: 12px;
+        margin: 10px 0;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+        .bus-option:hover {
+            border-color: var(--primary-lighter);
+            background: var(--neutral-lighter);
+        }
+
+    .bus-info {
+        flex: 1;
+        margin-left: 15px;
+    }
+
+    .bus-name {
+        font-weight: 600;
+        color: var(--primary);
+        margin-bottom: 5px;
+    }
+
+    .bus-meta {
+        display: flex;
+        gap: 15px;
+        font-size: 13px;
+        color: #666;
+    }
+
+    .rating-stars {
+        color: #fbbf24;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 15px;
+        margin-top: 30px;
+    }
+
+    .btn {
+        flex: 1;
+        padding: 14px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-align: center;
+    }
+
+    .btn-outline {
+        border: 2px solid var(--primary);
+        background: white;
+        color: var(--primary);
+    }
+
+        .btn-outline:hover {
+            background: var(--neutral-lighter);
+        }
+
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+        border: none;
+    }
+
+        .btn-primary:hover {
+            background: var(--primary-light);
+        }
+
+    .premium-features {
+        background: linear-gradient(to right, var(--primary), var(--primary-light));
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        margin: 20px 0;
+    }
+
+    .premium-title {
+        font-weight: 600;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .premium-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+        .premium-list li {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+            .premium-list li::before {
+                content: "★";
+                color: #fbbf24;
+            }
+
+    .line {
+        flex-grow: 1;
+        border-bottom: 1px solid black;
+        margin: 0 10px; /* Khoảng cách giữa các đoạn gạch ngang */
+    }
+
+
+    .property-item.selected {
+        border: 2px solid #81c3d7;
+        background-color: #004e89;
+    }
+
+    .custom-radio {
+        position: relative;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: bold;
+        color: #333;
+    }
+
+        .custom-radio input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+    .radio-label {
+        padding: 10px 15px;
+        border: 2px solid #00296b;
+        border-radius: 15px;
+        transition: background-color 0.3s, color 0.3s;
+    }
+
+    .custom-radio input[type="radio"]:checked ~ .radio-label {
+        background-color: #004e89;
+        color: white;
+    }
+
+    .custom-radio .radio-label:hover {
+        background-color: #0582ca;
+        color: white;
+    }
+
+    .center-image {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    /*  phan hanh trinh popup */
+    /* Thiết kế cho liên kết hiển thị */
+    /* Gạch chân khi hover hoặc active */
+    .route-link {
+        font-size: 14px;
+        color: #007bff;
+        cursor: pointer;
+        font-weight: bold;
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+
+        .route-link:hover,
+        .route-link.active {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+
+    /* Các phần chi tiết hành trình */
+    .route-details {
+        padding: 15px;
+        background: #fff;
+        border-radius: 5px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .route-list {
+        list-style-type: none;
+        padding: 0;
+    }
+
+        .route-list li {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .route-list span.badge {
+            margin-right: 10px;
+        }
+
+        .route-list i {
+            margin: 0 5px;
+        }
+
+    .service-details, .premium-features {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 16px;
+        margin: 16px 0;
+        background-color: #f9f9f9;
+    }
+
+    .service-title, .premium-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 12px;
+        color: #333;
+        display: flex;
+        align-items: center;
+    }
+
+        .service-title i, .premium-title i {
+            margin-right: 8px;
+            color: #ff9800;
+        }
+
+    .service-list, .premium-list {
+        list-style: none;
+        padding-left: 0;
+    }
+
+        .service-list li, .premium-list li {
+            margin-bottom: 8px;
+        }
+
+        .service-list ul {
+            margin: 8px 0 0 16px;
+            list-style-type: disc;
+        }
+
+
+    body {
+        background-color: #f4f7fc; /* Lighter blue-tinted background */
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .iframe-container {
+        width: 100%;
+        overflow: hidden;
+        text-align: center;
+    }
+
+    .main-container {
+        background-color: var(--background-light);
+        border-radius: 1.5rem;
+        box-shadow: 0 10px 25px rgba(13, 27, 61, 0.1);
+    }
+
+    .trip-details-card {
+        background-color: #D4E2F3; /* Soft blue */
+        transition: transform 0.3s ease;
+    }
+
+        .trip-details-card:hover {
+            transform: scale(1.02);
+        }
+
+    .bus-info-grid {
+        background-color: var(--background-light);
+        border-radius: 0.5rem;
+        padding: 15px;
+    }
+
+        .bus-info-grid .col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+    .bill-details-card {
+        background-color: white;
+        border-radius: 1rem;
+        box-shadow: 0 5px 15px rgba(13, 27, 61, 0.1);
+    }
+
+    .booking-btn {
+        background-color: var(--secondary-color);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+        .booking-btn:hover {
+            background-color: #142D5E; /* Darker blue on hover */
+            transform: translateY(-3px);
+        }
+
+    .policy-section {
+        background-color: white;
+        border-radius: 1rem;
+        box-shadow: 0 5px 15px rgba(13, 27, 61, 0.1);
+    }
+
+        .policy-section ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+            .policy-section ul li {
+                margin-bottom: 10px;
+                position: relative;
+                padding-left: 20px;
+            }
+
+                .policy-section ul li::before {
+                    content: '•';
+                    color: var(--secondary-color);
+                    position: absolute;
+                    left: 0;
+                    font-weight: bold;
+                    font-size: 1.5em;
+                }
+
+    .image-gallery {
+        background-color: #f8f9fc; /* Very light blue */
+        border-radius: 0.5rem;
+        padding: 15px;
+    }
+
+    .popup {
+        display: none;
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(13, 27, 61, 0.1);
+        z-index: 1000;
+        min-width: 300px;
+        max-width: 100%;
+        max-height: 100%;
+        overflow: auto;
+        box-sizing: border-box;
+    }
+
+    .popup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding: 15px;
+        background: linear-gradient(135deg, #0D1B3D, #1A4B8D);
+    }
+
+    .close-btn {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #666;
+    }
+
+    .overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(13, 27, 61, 0.5);
+        z-index: 999;
+        transform: scale(1);
+    }
+
+    .custom-btn:hover {
+        opacity: 0.9;
+    }
+
+    .hotelbooking__categoris__wrap {
+        padding: 30px;
+        margin: 0;
+        box-sizing: border-box;
+        transition: border-color 0.3s ease, transform 0.3s ease;
+        box-shadow: 0 8px 16px rgba(13, 27, 61, 0.3), 0 16px 32px rgba(13, 27, 61, 0.2);
+    }
+
+    .thumbnail {
+        width: 100%;
+        height: 100%;
+        margin: 5px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+    }
+
+        .thumbnail:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(13, 27, 61, 0.2);
+        }
+
+    #imageViewer {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(13, 27, 61, 0.7);
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+
+        #imageViewer img {
+            max-width: 90%;
+            max-height: 90%;
+        }
+
+    .close {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        color: #fff;
+        font-size: 2rem;
+        cursor: pointer;
+    }
+
+    .mt-4 {
+        position: relative;
+    }
+
+    .custom-col {
+        position: absolute;
+        top: 18.6%;
+        left: 85.5%;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+        background-color: #fff;
+        padding: 10px;
+        border-radius: 10px;
+    }
+
+        .custom-col .thumb img {
+            width: 100%;
+            height: auto;
+            max-width: 100%;
+            object-fit: cover;
+            border-radius: 15px;
+        }
+
+    .custom-col-left {
+        position: absolute;
+        top: 34.5%;
+        left: 7%;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+        background-color: #fff;
+        padding: 10px;
+        border-radius: 10px;
+    }
+
+    .custom-btn:hover {
+        background-color: #142D5E;
+        transform: scale(1.1);
+    }
+
+    .custom-btn:active {
+        background-color: #0D1B3D;
+        transform: scale(0.98);
+    }
+
+    .floor-selected-info-panel {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .floor-selected-info-panel .bus-info-grid {
+        padding: 14px;
+    }
+
+    @@media (max-width: 992px) {
+        .floor-selected-info-panel {
+            min-width: 100%;
+            margin-top: 16px;
+        }
+    }
+
+</style>
+<section class="flight__onewaysection ">
+    <h5 class="text-center mb-3" style="color: #0D6EFD;"></h5>
+    <div class="bus-info-grid rounded p-3">
+        <div class="ticket__timeout mb__24">
+        </div>
+    </div>
+</section>
+<section class="flight__onewaysection ">
+    <div class="container-fluid contact bg-light mt-5">
+        <div class="row g-3 ">
+            <div class="col-lg-1">
+            </div>
+            <div class="col-lg-3">
+                <div class="common__filter__wrapper">
+                    <h5 class="text-center mb-3" style="color: #0D6EFD;">Chi Tiết Vé</h5>
+                    <div class="bus-info-grid rounded p-3">
+                        <div class="ticket__timeout mb__24">
+                            <p class="fz-16 fw-400 mb__10 lato dtext">
+                                Đặt vé ngay trước khi hết chỗ!
+                            </p>
+                            <div class="d-flex gap-3 align-items-center">
+                                <div class="icon d-flex align-items-center justify-content-center">
+                                    <img src="~/busjs/assets/img/svg/clocks.svg" alt="đồng hồ">
+                                </div>
+                                <div class="content">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="fz-24 lato fw-400 gratext">
+                                            29
+                                        </span>
+                                        <span class="fz-24 lato fw-400 gratext">
+                                            :
+                                        </span>
+                                        <span class="fz-24 lato fw-400 gratext">
+                                            01
+                                        </span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="fz-16 fw-400 dtext">
+                                            Phút
+                                        </span>
+                                        <span class="fz-16 fw-400 dtext">
+                                            Giây
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+
+
+
+
+
+
+
+                    </div>
+                </div>
+
+            </div>
+            <div class="col-lg-7">
+                <div class="common__filter__wrapper position-relative">
+
+
+                    <img src="~/busjs/assets/img/allseat/banner12.png" alt="select" style="width: 74%; height: auto; float: left;">
+
+
+
+                    <div class="bus-main-image-wrapper">
+                        <img id="mainBusImage" src="https://static.vexere.com/production/images/1774328096412.jpeg" alt="Hình xe khách" class="bus-main-image" />
+                    </div>
+
+                    <div class="common__filter__wrapper col custom-col-left" style="width:@seatControlWidth;">
+
+                        @if (isSeatCoach)
+                        {
+                            <span class="text-dark fw-bold">Sơ đồ ghế </span>
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fa fa-chair" style="margin-right: 8px;"></i>
+                                <button onclick="showPopup('popup1')" class="btn custom-btn w-100"
+                                        style="background-color: #2840BF; color: white; font-weight: bold;">
+                                    Ghế ngồi
+                                </button>
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="text-dark fw-bold">Chọn tầng </span>
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fa fa-arrow-up" style="margin-right: 8px;"></i>
+                                <button onclick="showPopup('popup1')" class="btn custom-btn w-100"
+                                        style="background-color: #2840BF; color: white; font-weight: bold;">
+                                    <i class="fa-solid fa-stairs"></i>
+                                    1
+                                </button>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <i class="fa fa-arrow-down" style="margin-right: 8px;"></i>
+                                <button onclick="showPopup('popup2')" class="btn custom-btn w-100"
+                                        style="background-color: #ffff; color: #2840BF; font-weight: bold;">
+                                    <i class="fa-solid fa-stairs"></i>
+                                    2
+                                </button>
+                            </div>
+                        }
+
+                    </div>
+
+                    <!-- Popup 1 -->
+                    <div id="popup1" class="popup @(isSeatCoach ? "seat-coach-popup" : "")">
+                        <div class="popup-header">
+                            <h5 class="m-0" style="color: #fff;">@(isSeatCoach ? "Sơ đồ ghế ngồi" : "Thông tin tầng 1")</h5>
+                            <button class="close-btn" onclick="closePopup('popup1')" style="color: #fff;">&times;</button>
+                        </div>
+                        <div class="popup-content">
+                            <div class="row">
+
+                                <style>
+                                    .material-symbols-outlined.seat-icon {
+                                        transform: rotate(320deg);
+                                        font-size: 50px;
+                                    }
+
+                                    .seat-selected {
+                                        color: #4CAF50; /* Màu xanh lá cho ghế đã chọn */
+                                    }
+
+                                    .seat-booked {
+                                        color: #F44336; /* Màu đỏ cho ghế đã đặt */
+                                    }
+
+                                    .seat-available {
+                                        color: #2196F3; /* Màu xanh dương cho ghế trống */
+                                    }
+                                </style>
+
+                                <div class="@(isSeatCoach ? "col-12" : "col-7")">
+                                    <div class="common__filter__wrapper">
+
+                                        <div class="feature-card">
+                                            <div class="d-flex flex-wrap justify-content-between gap-4 align-items-center">
+                                                <div class="d-flex fz-16 gap-2 fw-400 lato dtext align-items-center">
+                                                    <img src="~/busjs/assets/img/allseat/seat-smain.png" alt="select">
+                                                    Selected
+                                                </div>
+                                                <div class="d-flex fz-16 gap-2 fw-400 lato dtext align-items-center">
+                                                    <img src="~/busjs/assets/img/allseat/seat-bmain.png" alt="select">
+                                                    Booked
+                                                </div>
+                                                <div class="d-flex fz-16 gap-2 fw-400 lato dtext align-items-center">
+                                                    <img src="~/busjs/assets/img/allseat/seat-amain.png" alt="select">
+                                                    Available
+                                                </div>
+                                                @if (!isSeatCoach)
+                                                {
+                                                    <div class="d-flex fz-16 gap-2 fw-400 lato dtext align-items-center">
+                                                        <div class="d-flex align-items-center mb-2">
+                                                            <i class="fa fa-arrow-up" style="margin-right: 8px;"></i>
+                                                            <button onclick="showPopup('popup2')" class="btn custom-btn w-100"
+                                                                    style="background-color: #fff; color: #2840BF; font-weight: bold;">
+                                                                <i class="fa-solid fa-stairs"></i>
+                                                                2
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                        <div class="seat__linemain__wrapper">
+                                            <div class="d-flex align-items-center mb__20 justify-content-between gap-2">
+                                            </div>
+                                            <div class="d-flex align-items-center mb__20 justify-content-between gap-2">
+
+                                                <span class="img">
+                                                    <img src="~/busjs/assets/img/allseat/stering.png" alt="img">
+                                                </span>
+                                                <span class="fz-24 fw-400 lato dtext">
+                                                    Cửa
+                                                </span>
+                                            </div>
+
+
+                                            @if (isSeatCoach)
+                                            {
+                                                <div class="standard-seat-shell">
+                                                    <div class="seat-legend-inline">
+                                                        <div class="seat-legend-item">
+                                                            <span class="legend-seat-icon selected-icon"><i class="fa fa-chair"></i></span>
+                                                            Selected
+                                                        </div>
+                                                        <div class="seat-legend-item">
+                                                            <span class="legend-seat-icon booked-icon"><i class="fa fa-chair"></i></span>
+                                                            Booked
+                                                        </div>
+                                                        <div class="seat-legend-item">
+                                                            <span class="legend-seat-icon available-icon"><i class="fa fa-chair"></i></span>
+                                                            Available
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="standard-driver-row">
+                                                        <span class="driver-icon"><i class="fa-solid fa-steering-wheel"></i></span>
+                                                        <span class="door-label">Cửa</span>
+                                                    </div>
+
+                                                    <div class="standard-seat-map">
+                                                        @{
+                                                            var standardSeatList = firstFloorSeats;
+                                                            var standardRows = (int)Math.Ceiling(standardSeatList.Count / 4.0);
+                                                        }
+                                                        @for (int row = 0; row < standardRows; row++)
+                                                        {
+                                                            for (int col = 0; col < 4; col++)
+                                                            {
+                                                                if (col == 2)
+                                                                {
+                                                                    <div class="seat-aisle"></div>
+                                                                }
+
+                                                                var seat = standardSeatList.ElementAtOrDefault(row * 4 + col);
+
+                                                                if (seat != null)
+                                                                {
+                                                                    <button id="seat-@seat.Id"
+                                                                            class="time-slot standard-seat @(seat.SeatStatus == Status.Booked ? "booked" : "")"
+                                                                            onclick="selectSeat(this)"
+                                                                            data-seat-id="@seat.Id"
+                                                                            data-price="@seat.Price"
+                                                                            data-seat-number="@seat.SeatNumber"
+                                                                            @(seat.SeatStatus == Status.Booked ? "disabled" : "")>
+                                                                        <i class="fa fa-chair"></i>
+                                                                        <span>@seat.SeatNumber</span>
+                                                                    </button>
+
+                                                                    <div id="book-now-@seat.Id" class="seat-inline-book-now"></div>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <div class="standard-seat empty"></div>
+                                                                }
+                                                            }
+                                                        }
+                                                    </div>
+
+                                                    <div class="seat-action-bar">
+                                                        <span id="selectedSeatSummary" class="selected-seat-summary">Chưa chọn ghế</span>
+                                                        <button type="button" class="btn-book-selected" onclick="bookNow()">
+                                                            Đặt vé đã chọn
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                            <div class="sleeper-seat-map">
+                                                @foreach (var seat in firstFloorSeats)
+                                                {
+                                                    <button id="seat-@seat.Id"
+                                                            class="time-slot sleeper-seat @(seat.SeatStatus == Status.Booked ? "booked" : "")"
+                                                            onclick="selectSeat(this)"
+                                                            data-seat-id="@seat.Id"
+                                                            data-price="@seat.Price"
+                                                            data-seat-number="@seat.SeatNumber"
+                                                            @(seat.SeatStatus == Status.Booked ? "disabled" : "")>
+                                                        <i class="fa-solid fa-bed"></i>
+                                                        <span class="seat-number">@seat.SeatNumber</span>
+                                                    </button>
+                                                    <div id="book-now-@seat.Id" class="seat-inline-book-now"></div>
+                                                }
+                                            </div>
+
+                                            <div class="seat-action-bar">
+                                                <span class="selectedSeatSummaryText selected-seat-summary">Chưa chọn ghế</span>
+                                                <button type="button" class="btn-book-selected" onclick="bookNow()">
+                                                    Đặt vé đã chọn
+                                                </button>
+                                            </div>
+                                            }
+
+
+
+                                        </div>
+                                    </div>
+                                </div>
+
+                                @if (!isSeatCoach)
+                                {
+                                    <div class="col-5 common__filter__wrapper floor-selected-info-panel">
+                                        <h5 class="m-0 p-3" style="color: #000;">Thông tin tầng 1</h5>
+                                        <div class="bus-info-grid rounded">
+                                            <div class="selected-seats-list mb-4 p-3 border rounded bg-white">
+                                                <span class="text-dark fw-bold">Ghế Đã Chọn</span>
+                                                <ul id="selected-seats" class="list-unstyled m-0 selected-seats-list-js">
+                                                    <li>Chưa có ghế nào được chọn.</li>
+                                                </ul>
+                                            </div>
+
+                                            <div class="total-info p-3 border rounded bg-white mb-4">
+                                                <span class="text-dark fw-bold">Chi Tiết Thanh Toán</span>
+                                                <div class="d-flex justify-content-between mb-2">
+                                                    <span>Tổng Giá Tiền:</span>
+                                                    <strong id="total-price" class="text-dark total-price-js">0</strong> VND
+                                                </div>
+                                                <div class="d-flex justify-content-between">
+                                                    <span>Số Lượng Ghế:</span>
+                                                    <strong id="total-amount" class="text-dark total-amount-js">0</strong>
+                                                </div>
+                                            </div>
+
+                                            <button type="button" class="btn btn-primary w-100" style="background:#2840BF;border:none;font-weight:700;border-radius:12px;padding:12px 16px;" onclick="bookNow()">
+                                                Đặt vé đã chọn
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
+
+
+
+
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (!isSeatCoach)
+                    {
+                    <!-- Popup 2 -->
+                    <div id="popup2" class="popup">
+                        <div class="popup-header">
+                            <h5 class="m-0" style="color: #fff;">Thông tin tầng 2</h5>
+                            <button class="close-btn" onclick="closePopup('popup2')" style="color: #fff;">&times;</button>
+                        </div>
+                        <div class="popup-content">
+                            <div class="row">
+
+                                <div class="col-7">
+                                    <div class="common__filter__wrapper">
+
+                                        <div class="feature-card">
+                                            <div class="d-flex flex-wrap justify-content-between gap-4 align-items-center">
+                                                <div class="d-flex fz-16 gap-2 fw-400 lato dtext align-items-center">
+                                                    <img src="~/busjs/assets/img/allseat/seat-smain.png" alt="select">
+                                                    Selected
+                                                </div>
+                                                <div class="d-flex fz-16 gap-2 fw-400 lato dtext align-items-center">
+                                                    <img src="~/busjs/assets/img/allseat/seat-bmain.png" alt="select">
+                                                    Booked
+                                                </div>
+                                                <div class="d-flex fz-16 gap-2 fw-400 lato dtext align-items-center">
+                                                    <img src="~/busjs/assets/img/allseat/seat-amain.png" alt="select">
+                                                    Available
+                                                </div>
+                                                <div class="d-flex fz-16 gap-2 fw-400 lato dtext align-items-center">
+                                                    <div class="d-flex align-items-center mb-2">
+                                                        <i class="fa fa-arrow-up" style="margin-right: 8px;"></i>
+                                                        <button onclick="showPopup('popup1')" class="btn custom-btn w-100"
+                                                                style="background-color: #2840BF; color: white; font-weight: bold;">
+                                                            <i class="fa-solid fa-stairs"></i>
+                                                            1
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="seat__linemain__wrapper">
+                                            <div class="d-flex align-items-center mb__20 justify-content-between gap-2">
+                                            </div>
+                                            <div class="d-flex align-items-center mb__20 justify-content-between gap-2">
+
+                                                <span class="img">
+                                                    <img src="~/busjs/assets/img/allseat/stering.png" alt="img">
+                                                </span>
+                                                <span class="fz-24 fw-400 lato dtext">
+                                                    Cửa
+                                                </span>
+                                            </div>
+
+                                            <div class="sleeper-seat-map">
+                                                @foreach (var seat in secondFloorSeats)
+                                                {
+                                                    <button id="seat-@seat.Id"
+                                                            class="time-slot sleeper-seat @(seat.SeatStatus == Status.Booked ? "booked" : "")"
+                                                            onclick="selectSeat(this)"
+                                                            data-seat-id="@seat.Id"
+                                                            data-price="@seat.Price"
+                                                            data-seat-number="@seat.SeatNumber"
+                                                            @(seat.SeatStatus == Status.Booked ? "disabled" : "")>
+                                                        <i class="fa-solid fa-bed"></i>
+                                                        <span class="seat-number">@seat.SeatNumber</span>
+                                                    </button>
+                                                    <div id="book-now-@seat.Id" class="seat-inline-book-now"></div>
+                                                }
+                                            </div>
+
+                                            <div class="seat-action-bar">
+                                                <span class="selectedSeatSummaryText selected-seat-summary">Chưa chọn ghế</span>
+                                                <button type="button" class="btn-book-selected" onclick="bookNow()">
+                                                    Đặt vé đã chọn
+                                                </button>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-5 common__filter__wrapper">
+                                    <!-- Tiêu đề -->
+                                    <h5 class="m-0 p-3" style="color: #000;">Thông tin tầng 2</h5>
+                                    <div class="bus-info-grid rounded ">
+                                        <!-- Danh sách ghế đã chọn -->
+                                        <div class="selected-seats-list mb-4 p-3 border rounded bg-white">
+                                            <span class="text-dark fw-bold">Ghế Đã Chọn</span>
+
+                                            <ul id="selected-seats" class="list-unstyled m-0 selected-seats-list-js">
+                                                <!-- Danh sách ghế sẽ được hiển thị tại đây -->
+                                                <li>Chưa có ghế nào được chọn.</li>
+                                            </ul>
+                                        </div>
+
+                                        <!-- Thông tin tổng giá tiền -->
+                                        <div class="total-info p-3 border rounded bg-white mb-4">
+                                            <span class="text-dark fw-bold">Chi Tiết Thanh Toán</span>
+
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <span>Tổng Giá Tiền:</span>
+                                                <strong id="total-price" class="text-dark total-price-js">0</strong> VND
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <span>Số Lượng Ghế:</span>
+                                                <strong id="total-amount" class="text-dark total-amount-js">0</strong>
+                                            </div>
+                                        </div>
+
+                                        <button type="button" class="btn btn-primary w-100" style="background:#2840BF;border:none;font-weight:700;border-radius:12px;padding:12px 16px;" onclick="bookNow()">
+                                            Đặt vé đã chọn
+                                        </button>
+
+                                        <!-- Combobox chọn điểm lên và xuống xe -->
+                                        <!-- Nút xác nhận -->
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    }
+                    <!-- Overlay -->
+                    <div id="overlay" class="overlay"></div>
+
+
+
+
+
+
+                    <div class="common__filter__wrapper col-3 custom-col">
+                        <div class="carferrari__item  align-items-center">
+                            <div class="top-header">
+                                <img src="~/busjs/assets/img/details/thaco.png" alt="Thaco Mobihome">
+                            </div>
+
+                            <div class="carferrari__content pl-5">
+                                <!-- Tiêu đề và loại xe -->
+                                <div class="d-flex carferari__box justify-content-center">
+                                    <div class="farrari__left">
+                                        <div class="d-flex mb__20 align-items-center gap-4">
+                                            <a href="#0">
+                                                <h5 class="dtext">
+                                                    Thaco Mobihome
+                                                </h5>
+                                            </a>
+                                            <span class="suv fz-16 fw-400 lato d-block gratext">
+                                                <span class="gratext">
+                                                    Xe khách giường nằm cao cấp
+                                                </span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Thông tin xe -->
+                                <ul class="trip-details-card rounded shadow-sm p-3 mb__10 justify-content-between d-flex align-items-center">
+                                    <li class="d-grid justify-content-center text-center">
+                                        <span class="icon mb__10">
+                                            <img src="~/busjs/assets/img/svg/person.svg" alt="icon">
+                                        </span>
+                                        <span class="dtext fz-16 fw-400 lato d-block">
+                                            44 ghế
+                                        </span>
+                                    </li>
+                                    <li class="d-grid justify-content-center text-center">
+                                        <span class="icon mb__10">
+                                            <img src="~/busjs/assets/img/svg/lock.svg" alt="icon">
+                                        </span>
+                                        <span class="dtext fz-16 fw-400 lato d-block">
+                                            Wi-Fi
+                                        </span>
+                                    </li>
+                                    <li class="d-grid justify-content-center text-center">
+                                        <span class="icon mb__10">
+                                            <img src="~/busjs/assets/img/svg/setting.svg" alt="icon">
+                                        </span>
+                                        <span class="dtext fz-16 fw-400 lato d-block">
+                                            Điều hòa
+                                        </span>
+                                    </li>
+                                    <li class="d-grid justify-content-center text-center">
+                                        <span class="icon mb__10">
+                                            <img src="~/busjs/assets/img/svg/acs.svg" alt="icon">
+                                        </span>
+                                        <span class="dtext fz-16 fw-400 lato d-block">
+                                            Tiện ích
+                                        </span>
+                                    </li>
+                                </ul>
+                                <div class="feature-card">
+                                    <div class="feature-title">
+                                        <i class="material-symbols-outlined">verified</i>
+                                        Xe được chứng nhận
+                                    </div>
+                                    <ul class="feature-list">
+                                        <li>Đạt tiêu chuẩn an toàn của Bộ GTVT</li>
+                                        <li>Tài xế có trên 5 năm kinh nghiệm</li>
+                                        <li>Xe được bảo dưỡng định kỳ</li>
+                                        <li>@(isSeatCoach ? "Ghế ngồi rộng rãi, dễ chọn chỗ" : "Giường nằm Limousine thoải mái")</li>
+                                        <li>Có wifi miễn phí trên xe</li>
+                                        <li>Cam kết khởi hành đúng giờ</li>
+                                    </ul>
+
+                                </div>
+
+
+
+
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                    <div class="image-gallery mt-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <button id="prevBtn" class="btn btn-outline-primary">←</button>
+                            <div class="row justify-content-center" id="imageContainer"></div>
+                            <button id="nextBtn" class="btn btn-outline-primary" style="margin-left: 10px;">→</button>
+                        </div>
+                    </div>
+
+                    <div class="image-viewer" id="imageViewer">
+                        <span class="close" id="closeViewer">&times;</span>
+                        <img class="viewer-image" id="viewerImage" alt="Ảnh lớn">
+                    </div>
+                    <div class="row g-4 justify-content-center p-3">
+                        <!-- Left column - Trip Details -->
+                        <div class="col-lg-8">
+
+
+                            <ul class="list-unstyled mb-3">
+                                <li class="d-flex justify-content-between align-items-center">
+                                    <span class="text-dark fw-bold">Từ Hà Nội Đến Thành Phố Hồ Chí Minh</span>
+                                    <span class="text-primary" style="color: #3E4BBF;">22-12-23 Thứ Bảy (Thời gian: <b>2h 30m</b>)</span>
+                                </li>
+                            </ul>
+                            <div class="bus-info-grid rounded p-3">
+                                <div class="row text-center">
+                                    <!-- All original column contents remain exactly the same -->
+                                    <div class="col">
+                                        <img src="~/busjs/assets/img/payment/deltas.jpg" alt="Hãng xe" class="img-fluid mb-2" style="border-radius: 8px;">
+                                        <p class="text-muted">Hãng Xe Delta Express</p>
+                                    </div>
+                                    <div class="col">
+                                        <p class="fw-bold" style="color: #1E0702;">8:10 sáng</p>
+                                        <p class="text-muted">Hà Nội</p>
+                                    </div>
+                                    <div class="col">
+                                        <p class="fw-bold" style="color: #1E0702;">2h 10m</p>
+                                        <p class="text-muted">(5+ điểm dừng)</p>
+                                    </div>
+                                    <div class="col">
+                                        <p class="fw-bold" style="color: #1E0702;">10:20 sáng</p>
+                                        <p class="text-muted">TP Hồ Chí Minh</p>
+                                    </div>
+                                    <div class="col">
+                                        <p class="fw-bold" style="color: #1E0702;">Ghế số: 1</p>
+                                        <p class="text-muted">@layoutName có điều hòa</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class=" premium-features">
+                                <div id="map" style="height: 700px;  border-radius: 1rem; "></div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="common__filter__wrapper">
+                                @foreach (var stop in ViewBag.Stops)
+                                {
+                                    <li class="timeline-item d-flex position-relative overflow-hidden"
+                                        data-latitude="@stop.Latitude" data-longitude="@stop.Longitude"
+                                        onclick="showStopOnMap(this)"
+                                        style="display: flex; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px;">
+                                        <span class="badge badge-blue" style="flex-shrink: 0;">11:00</span>
+                                        <i class="fas fa-dot-circle" style="color: #1f3d8f; margin: 0 5px; flex-shrink: 0;"></i>
+                                        <div class="timeline-desc text-justifed text-dark mt-n1" style="flex-grow: 1; text-align: left;">
+                                            <span style="color: #000; font-weight: bold;">@stop.Name</span> - @stop.Location
+                                        </div>
+                                    </li>
+
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right column - Bill Details -->
+
+
+
+                </div>
+
+                <!-- 3D Model Section - Kept exactly as original -->
+                <!-- Policy Section - Kept exactly as original -->
+                <!-- Original content remains exactly the same, just wrapped in enhanced styling -->
+
+            </div>
+        </div>
+        <div class="col-lg-1">
+        </div>
+    </div>
+
+    </div>
+</section>
+</html>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+<script></script>
+
+
+
+
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="lib/wow/wow.min.js"></script>
+<script src="lib/easing/easing.min.js"></script>
+<script src="lib/waypoints/waypoints.min.js"></script>
+<script src="lib/owlcarousel/owl.carousel.min.js"></script>
+<script src="js/main.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+<!-- JavaScript Libraries -->
+<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/DisplayTrip1/lib/wow/wow.min.js"></script>
+<script src="~/DisplayTrip1/lib/easing/easing.min.js"></script>
+<script src="~/DisplayTrip1/lib/waypoints/waypoints.min.js"></script>
+<script src="~/DisplayTrip1/lib/owlcarousel/owl.carousel.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<img src="~/busjs/assets/img/logo/map-tag-user-svgrepo-com.png" />
+<script>
+    function showPopup(popupId) {
+        // Đảm bảo chỉ một popup được mở
+        document.querySelectorAll('.popup').forEach(popup => {
+            popup.style.display = 'none'; // Tắt tất cả popup
+        });
+
+        // Hiển thị popup được yêu cầu
+        document.getElementById(popupId).style.display = 'block';
+        document.getElementById('overlay').style.display = 'block';
+    }
+
+    function closePopup(popupId) {
+        // Tắt popup được yêu cầu
+        document.getElementById(popupId).style.display = 'none';
+        // Kiểm tra nếu không có popup nào mở, tắt overlay
+        const isAnyPopupVisible = Array.from(document.querySelectorAll('.popup'))
+            .some(popup => popup.style.display === 'block');
+
+        if (!isAnyPopupVisible) {
+            document.getElementById('overlay').style.display = 'none';
+        }
+    }
+
+    // Đóng tất cả popup khi click vào overlay
+    document.getElementById('overlay').onclick = function () {
+        document.querySelectorAll('.popup').forEach(popup => {
+            popup.style.display = 'none';
+        });
+        document.getElementById('overlay').style.display = 'none';
+    };
+</script>
+
+<script>
+    function selectSeat(seatButton) {
+        // Loại bỏ lớp 'selected' khỏi tất cả các ghế hiện đang được chọn
+        var selectedSeats = document.querySelectorAll('.selected');
+        selectedSeats.forEach(function (seat) {
+            seat.classList.remove('selected');
+        });
+
+        // Thêm lớp 'selected' vào ghế được chọn
+        seatButton.classList.add('selected');
+
+        // Lấy thông tin số ghế và giá vé từ ghế được chọn
+        var seatNumber = seatButton.innerText.trim();
+        var seatPrice = seatButton.getAttribute("data-price");
+
+        // Cập nhật thông tin ghế đã chọn trong phần chi tiết giá
+        document.getElementById("selectedSeatNumber").innerText = seatNumber;
+        document.getElementById("selectedSeatPrice").innerText = seatPrice;
+    }
+</script>
+
+<script>
+
+    // Initialize map
+    var map = L.map('map').setView([
+        @Model.BusRoute.StartStop?.Latitude,
+        @Model.BusRoute.StartStop?.Longitude
+    ], 8);
+
+    // Start & End
+    var start = L.latLng(
+        @Model.BusRoute.StartStop?.Latitude,
+        @Model.BusRoute.StartStop?.Longitude
+    );
+
+    var end = L.latLng(
+        @Model.BusRoute.EndStop?.Latitude,
+        @Model.BusRoute.EndStop?.Longitude
+    );
+
+    // Fit map
+    var bounds = L.latLngBounds([start, end]);
+    map.fitBounds(bounds);
+
+    // Tile map
+    L.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {
+            attribution:
+            '&copy; OpenStreetMap contributors'
+        }
+    ).addTo(map);
+
+    // Marker start
+    L.marker(start)
+        .addTo(map)
+        .bindPopup(
+            "Start: @Model.BusRoute.StartStop?.Name"
+        );
+
+    // Marker end
+    L.marker(end)
+        .addTo(map)
+        .bindPopup(
+            "End: @Model.BusRoute.EndStop?.Name"
+        );
+
+    // Route
+    fetch(
+        `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`
+    )
+
+    .then(response => response.json())
+
+    .then(data => {
+
+        var coordinates =
+            data.routes[0].geometry.coordinates;
+
+        var latLngs =
+            coordinates.map(coord =>
+                [coord[1], coord[0]]
+            );
+
+        L.polyline(latLngs, {
+            color: 'blue',
+            weight: 5,
+            opacity: 0.8
+        }).addTo(map);
+
+    })
+
+    .catch(error => {
+
+        console.error(
+            "Không thể lấy dữ liệu tuyến đường:",
+            error
+        );
+
+    });
+
+    // Stop icon
+    var stopIcon = L.icon({
+
+        iconUrl:
+        '/images/position-icon.jpg',
+
+        iconSize: [41, 41],
+
+        iconAnchor: [12, 41],
+
+        popupAnchor: [1, -34],
+
+        shadowSize: [41, 41],
+
+        shadowAnchor: [12, 41]
+
+    });
+
+    // Show stop
+    function showStopOnMap(element) {
+
+        var latitude =
+            element.getAttribute('data-latitude');
+
+        var longitude =
+            element.getAttribute('data-longitude');
+
+        var stopLatLng =
+            L.latLng(latitude, longitude);
+
+        L.marker(stopLatLng, {
+            icon: stopIcon
+        })
+
+        .addTo(map)
+
+        .bindPopup(
+            "Stop: " +
+            element.querySelector(
+                '.timeline-desc span'
+            ).innerText
+        );
+
+        map.setView(stopLatLng, 10);
+    }
+
+    // Current location
+    if (navigator.geolocation) {
+
+        navigator.geolocation.getCurrentPosition(
+
+            function (position) {
+
+                var currentLatLng = L.latLng(
+                    position.coords.latitude,
+                    position.coords.longitude
+                );
+
+                var customIcon = L.icon({
+
+                    iconUrl:
+                    '/busjs/assets/img/logo/map-pin-svgrepo-com.png',
+
+                    iconSize: [45, 45],
+
+                    iconAnchor: [25, 50],
+
+                    popupAnchor: [0, -50]
+
+                });
+
+                L.marker(currentLatLng, {
+                    icon: customIcon
+                })
+
+                .addTo(map)
+
+                .bindPopup("<b>Vị trí của bạn</b>")
+
+                .openPopup();
+
+                map.setView(currentLatLng, 12);
+
+            },
+
+            function (error) {
+
+                console.error(
+                    "Không thể xác định vị trí hiện tại:",
+                    error.message
+                );
+
+            }
+
+        );
+
+    } else {
+
+        console.error(
+            "Trình duyệt không hỗ trợ Geolocation."
+        );
+
+    }
+
+</script>
+
+<script type="text/javascript">
+    var iframe = document.getElementById('sketchfab-iframe');
+    var iframeWindow = iframe.contentWindow;
+    iframeWindow.postMessage('{"event":"viewerready"}', '*');
+
+    // Hide the source/credits and other UI elements
+    iframeWindow.postMessage('{"event":"setUiVisibility", "params": {"annotations": true, "info": false, "fullscreen": true}}', '*');
+</script>
+<!-- Template Javascript -->
+<script src="js/main.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const imagePaths = [
+            '/busjs/assets/img/details/busd1.png',
+            '/busjs/assets/img/details/busd4.png',
+            '/busjs/assets/img/details/busd3.png',
+            '/busjs/assets/img/details/busd2.png',
+            '/busjs/assets/img/details/busd2.png',
+            '/busjs/assets/img/payment/other-image5.jpg',
+            '/busjs/assets/img/payment/other-image6.jpg',
+            '/busjs/assets/img/payment/other-image7.jpg',
+            '/busjs/assets/img/payment/other-image8.jpg',
+            '/busjs/assets/img/payment/other-image9.jpg',
+            '/busjs/assets/img/payment/other-image10.jpg',
+            '/busjs/assets/img/payment/other-image11.jpg',
+            '/busjs/assets/img/payment/other-image12.jpg'
+        ];
+
+        let currentStartIndex = 0; // Chỉ số ảnh bắt đầu
+
+        const imageContainer = document.getElementById("imageContainer");
+        const prevBtn = document.getElementById("prevBtn");
+        const nextBtn = document.getElementById("nextBtn");
+
+        const loadImages = (startIndex) => {
+            imageContainer.innerHTML = '';
+            const endIndex = Math.min(startIndex + 4, imagePaths.length);
+
+            for (let i = startIndex; i < endIndex; i++) {
+                const imgElement = document.createElement("img");
+                imgElement.src = imagePaths[i];
+                imgElement.alt = `Ảnh ${i + 1}`;
+                imgElement.classList.add("thumbnail");
+                imgElement.addEventListener("click", () => {
+                    showImageViewer(imgElement.src);
+                });
+                const col = document.createElement("div");
+                col.classList.add("col-3", "mb-4");
+                col.appendChild(imgElement);
+                imageContainer.appendChild(col);
+            }
+
+            prevBtn.disabled = currentStartIndex === 0;
+            nextBtn.disabled = currentStartIndex + 4 >= imagePaths.length;
+        };
+
+        const showImageViewer = (src) => {
+            const viewerImage = document.getElementById("viewerImage");
+            viewerImage.src = src;
+            const imageViewer = document.getElementById("imageViewer");
+            imageViewer.style.display = "flex"; // Hiển thị ảnh lớn
+
+            // Cuộn đến vị trí ảnh lớn và căn giữa
+            viewerImage.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+                inline: "center"
+            });
+        };
+
+        const closeImageViewer = () => {
+            document.getElementById("imageViewer").style.display = "none";
+        };
+
+
+        document.getElementById("closeViewer").addEventListener("click", closeImageViewer);
+        document.getElementById("imageViewer").addEventListener("click", (e) => {
+            if (e.target === document.getElementById("imageViewer")) {
+                closeImageViewer();
+            }
+        });
+
+        // Load ảnh ban đầu
+        loadImages(currentStartIndex);
+
+        // Nút mũi tên trước
+        prevBtn.addEventListener("click", () => {
+            if (currentStartIndex > 0) {
+                currentStartIndex -= 4;
+                loadImages(currentStartIndex);
+            }
+        });
+
+        // Nút mũi tên sau
+        nextBtn.addEventListener("click", () => {
+            if (currentStartIndex + 4 < imagePaths.length) {
+                currentStartIndex += 4;
+                loadImages(currentStartIndex);
+            }
+        });
+    });
+
+</script>
+<script>
+    var selectedSeatIds = [];
+
+    function parseSeatPrice(value) {
+        if (!value) return 0;
+        var cleaned = String(value).replace(/[^0-9.,-]/g, '').replace(/,/g, '');
+        var parsed = parseFloat(cleaned);
+        return isNaN(parsed) ? 0 : parsed;
+    }
+
+    function formatVnd(value) {
+        return Math.round(value).toLocaleString('vi-VN');
+    }
+
+    function getSelectedSeatButtons() {
+        return Array.from(document.querySelectorAll('.time-slot.selected'));
+    }
+
+    function updateSelectedSeatSummary() {
+        var selectedButtons = getSelectedSeatButtons();
+        var names = selectedButtons.map(function (btn) {
+            return btn.getAttribute('data-seat-number') || btn.innerText.trim();
+        });
+
+        var text = selectedButtons.length
+            ? 'Đã chọn ' + selectedButtons.length + ' ghế: ' + names.join(', ')
+            : 'Chưa chọn ghế';
+
+        var mainSummary = document.getElementById('selectedSeatSummary');
+        if (mainSummary) mainSummary.innerText = text;
+
+        document.querySelectorAll('.selectedSeatSummaryText').forEach(function (el) {
+            el.innerText = text;
+        });
+
+        var selectedListHtml = !selectedButtons.length
+            ? '<li>Chưa có ghế nào được chọn.</li>'
+            : names.map(function (name) {
+                return '<li><span class="text-dark fw-bold">' + name + '</span></li>';
+            }).join('');
+
+        document.querySelectorAll('#selected-seats, .selected-seats-list-js').forEach(function (selectedList) {
+            selectedList.innerHTML = selectedListHtml;
+        });
+
+        var totalPrice = selectedButtons.reduce(function (sum, btn) {
+            return sum + parseSeatPrice(btn.getAttribute('data-price'));
+        }, 0);
+
+        document.querySelectorAll('#total-price, .total-price-js').forEach(function (totalPriceEl) {
+            totalPriceEl.innerText = formatVnd(totalPrice);
+        });
+
+        document.querySelectorAll('#total-amount, .total-amount-js').forEach(function (totalAmountEl) {
+            totalAmountEl.innerText = selectedButtons.length;
+        });
+    }
+
+    function selectSeat(button) {
+        var seatId = button.getAttribute('data-seat-id');
+        var bookNowBox = document.getElementById('book-now-' + seatId);
+
+        if (button.classList.contains('selected')) {
+            button.classList.remove('selected');
+            selectedSeatIds = selectedSeatIds.filter(function (id) { return id !== seatId; });
+            if (bookNowBox) bookNowBox.style.display = 'none';
+        } else {
+            button.classList.add('selected');
+            if (!selectedSeatIds.includes(seatId)) {
+                selectedSeatIds.push(seatId);
+            }
+            if (bookNowBox) bookNowBox.style.display = 'none';
+        }
+
+        updateSelectedSeatSummary();
+    }
+
+    function bookNow(seatId) {
+        if (seatId && !selectedSeatIds.includes(String(seatId))) {
+            selectedSeatIds.push(String(seatId));
+        }
+
+        if (!selectedSeatIds.length) {
+            alert('Vui lòng chọn ít nhất một ghế trước!');
+            return;
+        }
+
+        var tripId = '@Model.Id';
+        var url = '@Url.Action("Add", "Reservation")?tripId=' + tripId + '&seatIds=' + selectedSeatIds.join(',');
+        window.location.href = url;
+    }
+</script>
+
+

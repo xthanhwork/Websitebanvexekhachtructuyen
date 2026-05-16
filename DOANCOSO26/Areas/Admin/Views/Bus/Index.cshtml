@@ -1,0 +1,265 @@
+﻿@model IEnumerable<DOANCOSO26.Models.Bus>
+@using DOANCOSO26.Models
+
+@{
+    ViewBag.Title = "Quản lý xe";
+
+    var companyFilter = ViewBag.CompanyFilter as string ?? "";
+    var typeFilter = ViewBag.TypeFilter as string ?? "";
+    var busNumberFilter = ViewBag.BusNumberFilter as string ?? "";
+
+    var companies = ViewBag.CompanyList as List<string> ?? new List<string>();
+    var types = ViewBag.TypeList as List<string> ?? new List<string>();
+    var busNumbers = ViewBag.BusNumberList as List<string> ?? new List<string>();
+}
+
+<div class="bus-page">
+    <div class="bus-card">
+        <h2>Danh sách xe</h2>
+
+        <a asp-action="Add" class="btn btn-create">Tạo xe mới</a>
+
+        <form method="get" asp-action="Index" class="filter-box">
+            <div class="filter-item">
+                <label>Hãng xe</label>
+                <select name="companyFilter" class="form-control" onchange="this.form.submit()">
+                    <option value="" selected="@(string.IsNullOrEmpty(companyFilter) ? "selected" : null)">Tất cả</option>
+                    @foreach (var company in companies)
+                    {
+                        <option value="@company" selected="@(companyFilter == company ? "selected" : null)">@company</option>
+                    }
+                </select>
+            </div>
+
+            <div class="filter-item">
+                <label>Loại xe</label>
+                <select name="typeFilter" class="form-control" onchange="this.form.submit()">
+                    <option value="" selected="@(string.IsNullOrEmpty(typeFilter) ? "selected" : null)">Tất cả</option>
+                    @foreach (var type in types)
+                    {
+                        <option value="@type" selected="@(typeFilter == type ? "selected" : null)">@type</option>
+                    }
+                </select>
+            </div>
+
+            <div class="filter-item filter-plate">
+                <label>Biển số xe</label>
+                <select name="busNumberFilter" class="form-control" onchange="this.form.submit()">
+                    <option value="" selected="@(string.IsNullOrEmpty(busNumberFilter) ? "selected" : null)">Tất cả</option>
+                    @foreach (var plate in busNumbers)
+                    {
+                        <option value="@plate" selected="@(busNumberFilter == plate ? "selected" : null)">@plate</option>
+                    }
+                </select>
+            </div>
+
+            <div class="filter-actions">
+                <button type="submit" class="btn btn-filter">Lọc</button>
+                <a asp-action="Index" class="btn btn-clear">Xóa lọc</a>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table bus-table">
+                <thead>
+                    <tr>
+                        <th>Hãng</th>
+                        <th>Biển số xe</th>
+                        <th>Loại xe</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var bus in Model)
+                        {
+                            <tr>
+                                <td>@bus.Company</td>
+                                <td>@bus.BusNumber</td>
+                                <td>@bus.BusType?.ToString()</td>
+                                <td>
+                                    <span class="status-badge @(bus.OperatingStatus == BusOperatingStatus.Active ? "active" : "hidden")">
+                                        @bus.OperatingStatus
+                                    </span>
+                                </td>
+                                <td class="action-cell">
+                                    <a asp-action="Update" asp-route-id="@bus.Id" class="btn btn-action">Sửa</a>
+                                    <a asp-action="Display" asp-route-id="@bus.Id" class="btn btn-action">Chi tiết</a>
+
+                                    <form method="post" asp-action="EditStatus" asp-route-id="@bus.Id" class="status-form">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="companyFilter" value="@companyFilter" />
+                                        <input type="hidden" name="typeFilter" value="@typeFilter" />
+                                        <input type="hidden" name="busNumberFilter" value="@busNumberFilter" />
+                                        <select name="status" class="form-control form-control-sm" onchange="this.form.submit()">
+                                            <option value="Active" selected="@(bus.OperatingStatus == BusOperatingStatus.Active ? "selected" : null)">Active</option>
+                                            <option value="Hidden" selected="@(bus.OperatingStatus == BusOperatingStatus.Hidden ? "selected" : null)">Hidden</option>
+                                        </select>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" class="empty-row">Không có xe phù hợp với bộ lọc.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bus-page {
+        padding: 24px 24px 40px;
+    }
+
+    .bus-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 22px;
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.08);
+    }
+
+        .bus-card h2 {
+            text-align: center;
+            font-weight: 700;
+            margin-bottom: 22px;
+        }
+
+    .btn-create {
+        display: block;
+        width: 100%;
+        background: #4f46ad;
+        color: #fff;
+        border-radius: 10px;
+        padding: 11px 16px;
+        margin-bottom: 16px;
+        text-align: center;
+        text-decoration: none;
+    }
+
+        .btn-create:hover,
+        .btn-action:hover,
+        .btn-filter:hover {
+            color: #fff;
+            opacity: 0.9;
+        }
+
+    .filter-box {
+        display: flex;
+        gap: 14px;
+        align-items: end;
+        flex-wrap: wrap;
+        background: #dffaf0;
+        border: 1px solid #b6ead8;
+        border-radius: 10px;
+        padding: 14px;
+        margin-bottom: 18px;
+    }
+
+    .filter-item {
+        min-width: 190px;
+    }
+
+    .filter-plate {
+        min-width: 240px;
+    }
+
+    .filter-item label {
+        font-weight: 600;
+        margin-bottom: 6px;
+        display: block;
+    }
+
+    .filter-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .btn-filter,
+    .btn-action {
+        background: #4f46ad;
+        color: #fff;
+        border-radius: 9px;
+        padding: 7px 14px;
+        text-decoration: none;
+        border: none;
+    }
+
+    .btn-clear {
+        background: #aaa;
+        color: #fff;
+        border-radius: 9px;
+        padding: 7px 14px;
+        text-decoration: none;
+    }
+
+    .bus-table {
+        border: 1px solid #ccd3df;
+        margin-bottom: 0;
+    }
+
+        .bus-table thead th {
+            background: #fff;
+            color: #111827;
+            font-weight: 700;
+            border: 1px solid #ccd3df;
+            padding: 14px;
+        }
+
+        .bus-table tbody td {
+            border: 1px solid #ccd3df;
+            padding: 14px;
+            vertical-align: middle;
+        }
+
+        .bus-table tbody tr:nth-child(odd) {
+            background: #e7e8f0;
+        }
+
+    .action-cell {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .status-form {
+        display: inline-block;
+        margin: 0;
+    }
+
+        .status-form select {
+            min-width: 95px;
+        }
+
+    .status-badge {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+        .status-badge.active {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-badge.hidden {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+    .empty-row {
+        text-align: center;
+        padding: 24px !important;
+        color: #6b7280;
+    }
+</style>

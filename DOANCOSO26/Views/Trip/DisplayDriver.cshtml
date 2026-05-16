@@ -1,0 +1,164 @@
+@model DOANCOSO26.Models.BusTrip
+@using DOANCOSO26.Models
+
+@{
+    ViewData["Title"] = "Chi tiết chuyến xe tài xế";
+    var stops = ViewBag.Stops as IEnumerable<Stop> ?? Enumerable.Empty<Stop>();
+    var bookings = ViewBag.Bookings as IEnumerable<Booking> ?? Enumerable.Empty<Booking>();
+    var seatInfoByBookingId = ViewBag.SeatInfoByBookingId as Dictionary<int, Seat> ?? new Dictionary<int, Seat>();
+
+    string StatusText(StatusTrip? status) => status switch
+    {
+        StatusTrip.Running => "Đang chạy",
+        StatusTrip.Departed => "Đã hoàn tất",
+        _ => "Chưa xuất phát"
+    };
+}
+
+<div class="container py-5 driver-trip-detail">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Chi tiết chuyến xe</h2>
+            <p class="text-muted mb-0">Theo dõi hành trình, danh sách khách và thao tác chuyến được phân công.</p>
+        </div>
+        <a asp-action="ViewMySchedule" class="btn btn-outline-secondary">Quay lại lịch trình</a>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header text-white" style="background:#ff9f24;">
+                    <h5 class="mb-0">Thông tin hành trình</h5>
+                </div>
+                <div class="card-body">
+                    @if (!stops.Any())
+                    {
+                        <div class="alert alert-info mb-0">Chuyến xe này chưa có dữ liệu trạm dừng.</div>
+                    }
+                    else
+                    {
+                        <div class="timeline-widget">
+                            @foreach (var stop in stops.OrderBy(x => x.Stt))
+                            {
+                                <div class="d-flex mb-3">
+                                    <div class="text-end pe-3" style="width:80px;">
+                                        <div class="fw-bold">@stop.Stt</div>
+                                        <div class="small text-muted">@Model.DepartureTime.ToString("HH:mm")</div>
+                                    </div>
+                                    <div class="pe-3 d-flex flex-column align-items-center">
+                                        <span class="rounded-circle border border-primary" style="width:14px;height:14px;display:block;"></span>
+                                        <span style="width:2px;min-height:40px;background:#ff9f24;display:block;"></span>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">@stop.Name</div>
+                                        <div class="text-muted">@stop.Location</div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header text-white" style="background:#ff9f24;">
+                    <h5 class="mb-0">Danh sách hành khách</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped mb-0 align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Mã vé</th>
+                                    <th>Khách hàng</th>
+                                    <th>SĐT</th>
+                                    <th>Ghế</th>
+                                    <th>Trạng thái lên xe</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (!bookings.Any())
+                                {
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">Chưa có khách đặt vé cho chuyến này.</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    foreach (var booking in bookings)
+                                    {
+                                        seatInfoByBookingId.TryGetValue(booking.Id, out var seat);
+                                        <tr>
+                                            <td>@booking.InvoiceCode</td>
+                                            <td>@booking.UserName</td>
+                                            <td>@booking.SDT</td>
+                                            <td>@(seat?.SeatNumber ?? "N/A")</td>
+                                            <td>@booking.StatusOnBus</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header text-white" style="background:#ff9f24;">
+                    <h5 class="mb-0">Thông tin chuyến</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Tuyến xe:</strong> @Model.BusRoute?.StartStop?.Name - @Model.BusRoute?.EndStop?.Name</p>
+                    <p><strong>Nhà xe:</strong> @Model.Bus?.Company</p>
+                    <p><strong>Biển số:</strong> @Model.Bus?.BusNumber</p>
+                    <p><strong>Loại xe:</strong> @Model.Bus?.BusType</p>
+                    <p><strong>Giờ xuất bến:</strong> @Model.DepartureTime.ToString("HH:mm")</p>
+                    <p><strong>Ngày xuất bến:</strong> @Model.DepartureDate.ToString("dd/MM/yyyy")</p>
+                    <p><strong>Số ghế:</strong> @Model.Capacity</p>
+                    <p><strong>Ghế trống:</strong> @Model.GetAvailableSeats()</p>
+                    <p><strong>Trạng thái:</strong> <span class="badge bg-primary">@StatusText(Model.TripStatus)</span></p>
+
+                    <div class="d-grid gap-2 mt-4">
+                        @if (Model.TripStatus == null || Model.TripStatus == StatusTrip.NotYetDeparted)
+                        {
+                            <form asp-action="StartTrip" asp-route-id="@Model.Id" method="post">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-success w-100" onclick="return confirm('Bạn muốn bắt đầu chuyến xe này?');">Bắt đầu chuyến</button>
+                            </form>
+                        }
+                        else if (Model.TripStatus == StatusTrip.Running)
+                        {
+                            <a class="btn btn-warning" asp-action="CreateReport" asp-route-id="@Model.Id">Cập nhật hành khách / Tạo phiếu báo cáo</a>
+                        }
+                        else
+                        {
+                            <button class="btn btn-secondary" disabled>Chuyến đã hoàn tất</button>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3">Hướng dẫn thao tác</h5>
+                    <ol class="mb-0">
+                        <li>Bấm <strong>Bắt đầu chuyến</strong> khi xe chuẩn bị xuất bến.</li>
+                        <li>Khi chuyến đang chạy, bấm <strong>Cập nhật hành khách / Tạo phiếu báo cáo</strong>.</li>
+                        <li>Tick khách đã lên xe hoặc đã đến nơi, nhập chi phí và lưu báo cáo.</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

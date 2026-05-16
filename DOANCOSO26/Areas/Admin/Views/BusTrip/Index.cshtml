@@ -1,0 +1,206 @@
+@using Microsoft.AspNetCore.Mvc.Rendering
+@model IEnumerable<DOANCOSO26.Models.BusTrip>
+
+@{
+    var companyFilter = ViewBag.CompanyFilter as string;
+    var busIdFilter = ViewBag.BusIdFilter;
+    var departureDateFilter = ViewBag.DepartureDateFilter as string;
+    var sortOrder = (ViewBag.SortOrder as string) ?? "date_desc";
+    var companies = ViewBag.Companies as IEnumerable<string> ?? Enumerable.Empty<string>();
+    var selectedCompanyLabel = string.IsNullOrWhiteSpace(companyFilter) ? "-- Tất cả hãng xe --" : companyFilter;
+}
+
+<div class="card shadow border-0 mt-4">
+    <div class="row">
+        <div class="col-12 text-center">
+            <h2>Danh sách chuyến xe</h2>
+        </div>
+    </div>
+
+    <div class="card-body p-4">
+        @if (TempData["Message"] != null)
+        {
+            <div class="alert alert-info">@TempData["Message"]</div>
+        }
+        <div class="row pb-3 g-2">
+            <div class="col-auto">
+                <a asp-controller="BusTrip" asp-action="Add" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Tạo chuyến
+                </a>
+            </div>
+            @* <div class="col-auto">
+                <a asp-controller="Seat" asp-action="Add" class="btn btn-primary">
+                    <i class="bi bi-pencil-square"></i> Tạo ghế
+                </a>
+            </div>*@
+            <div class="col-auto">
+                <a asp-controller="BusTrip" asp-action="RevenueReport" class="btn btn-success">
+                    <i class="bi bi-bar-chart"></i> Báo cáo doanh thu
+                </a>
+            </div>
+        </div>
+
+        <form id="busTripFilterForm" method="get" action="@Url.Action("Index", "BusTrip", new { area = "Admin" })" class="row g-3 align-items-end mb-4 p-3 border rounded bg-light">
+            <div class="col-md-3">
+                <label class="form-label">Lọc theo hãng xe</label>
+                <input type="hidden" id="companyFilterValue" name="company" value="@companyFilter" />
+                <div class="dropdown w-100">
+                    <button class="btn btn-light border dropdown-toggle w-100 text-start" type="button" id="companyFilterButton" data-bs-toggle="dropdown" aria-expanded="false">
+                        @selectedCompanyLabel
+                    </button>
+                    <ul class="dropdown-menu w-100" aria-labelledby="companyFilterButton" style="max-height:260px; overflow-y:auto;">
+                        <li>
+                            <button class="dropdown-item js-company-option @(string.IsNullOrWhiteSpace(companyFilter) ? "active" : "")" type="button" data-value="">-- Tất cả hãng xe --</button>
+                        </li>
+                        @foreach (var companyName in companies)
+                        {
+                            <li>
+                                <button class="dropdown-item js-company-option @(string.Equals(companyFilter, companyName, StringComparison.OrdinalIgnoreCase) ? "active" : "")" type="button" data-value="@companyName">@companyName</button>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Lọc theo nhà xe / biển số</label>
+                <select id="busIdFilter" name="busId" class="form-control">
+                    <option value="">-- Tất cả xe --</option>
+                    @foreach (var option in (IEnumerable<SelectListItem>)ViewBag.Buses)
+                    {
+                        <option value="@option.Value" selected="@(option.Selected ? "selected" : null)">@option.Text</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Ngày chuyến xe</label>
+                <input type="date" name="departureDate" value="@departureDateFilter" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Sắp xếp</label>
+                <select name="sortOrder" class="form-control">
+                    <option value="date_desc" selected="@(sortOrder == "date_desc" ? "selected" : null)">Ngày mới nhất</option>
+                    <option value="date" selected="@(sortOrder == "date" ? "selected" : null)">Ngày cũ nhất</option>
+                    <option value="company" selected="@(sortOrder == "company" ? "selected" : null)">Hãng xe A-Z</option>
+                    <option value="company_desc" selected="@(sortOrder == "company_desc" ? "selected" : null)">Hãng xe Z-A</option>
+                    <option value="bus" selected="@(sortOrder == "bus" ? "selected" : null)">Biển số A-Z</option>
+                    <option value="bus_desc" selected="@(sortOrder == "bus_desc" ? "selected" : null)">Biển số Z-A</option>
+                </select>
+            </div>
+            <div class="col-md-12">
+                <button type="submit" class="btn btn-primary">Lọc</button>
+                <a href="@Url.Action("Index", "BusTrip", new { area = "Admin" })" class="btn btn-secondary">Xóa lọc</a>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>
+                            <a asp-action="Index" asp-route-company="@companyFilter" asp-route-busId="@busIdFilter" asp-route-departureDate="@departureDateFilter" asp-route-sortOrder="@ViewBag.CompanySort">Hãng xe</a>
+                        </th>
+                        <th>
+                            <a asp-action="Index" asp-route-company="@companyFilter" asp-route-busId="@busIdFilter" asp-route-departureDate="@departureDateFilter" asp-route-sortOrder="@ViewBag.BusSort">Biển số xe</a>
+                        </th>
+                        <th>Điểm khởi hành</th>
+                        <th>Điểm đến</th>
+                        <th>
+                            <a asp-action="Index" asp-route-company="@companyFilter" asp-route-busId="@busIdFilter" asp-route-departureDate="@departureDateFilter" asp-route-sortOrder="@ViewBag.DateSort">Giờ / ngày khởi hành</a>
+                        </th>
+                        <th>Số ghế trống</th>
+                        <th>Giá trước / sau điều chỉnh</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="tripList">
+                    @foreach (var item in Model)
+                    {
+                        <tr class="trip">
+                            <td>@item.Bus?.Company</td>
+                            <td>@item.Bus?.BusNumber</td>
+                            <td>@item.BusRoute?.StartStop?.Name</td>
+                            <td>@item.BusRoute?.EndStop?.Name</td>
+                            <td>@item.DepartureTime.ToString("HH:mm") @item.DepartureDate.ToString("dd/MM/yyyy")</td>
+                            <td>@item.GetAvailableSeats()</td>
+                            <td>
+                                <div>Trước: @item.BusRoute?.Price</div>
+                                <div>Sau: @((item.Seats?.FirstOrDefault()?.Price ?? 0).ToString("N0")) VND</div>
+                            </td>
+                            <td>@item.TripStatus</td>
+                            <td>
+                                @{
+                                    var departureDateTime = item.DepartureDate.Date.Add(item.DepartureTime.TimeOfDay);
+                                    var isPastTrip = departureDateTime < DateTime.Now;
+                                }
+
+                                @if (!isPastTrip)
+                                {
+                                    <a asp-action="Update" asp-route-id="@item.Id" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-pencil-square"></i> Sửa
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary me-1">Chuyến quá khứ</span>
+                                }
+
+                                <a asp-action="Display" asp-route-id="@item.Id" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-card-list"></i> Chi tiết
+                                </a>
+
+                                @if (!isPastTrip)
+                                {
+                                    @if (item.TripStatus == StatusTrip.NotYetDeparted)
+                                    {
+                                        <a asp-action="Exit" asp-route-id="@item.Id" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-box-arrow-right"></i> Xuất bến
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <a asp-action="Exit" asp-route-id="@item.Id" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-file-text"></i> Phiếu xuất bến
+                                        </a>
+                                        <a class="btn btn-secondary btn-sm disabled">
+                                            <i class="bi bi-box-arrow-right"></i> Đã xuất bến
+                                        </a>
+                                    }
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const hiddenCompany = document.getElementById('companyFilterValue');
+            const labelButton = document.getElementById('companyFilterButton');
+            const busSelect = document.getElementById('busIdFilter');
+
+            document.querySelectorAll('.js-company-option').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    const value = this.getAttribute('data-value') || '';
+                    hiddenCompany.value = value;
+                    labelButton.textContent = this.textContent.trim();
+
+                    // Khi đổi hãng xe thì bỏ biển số cũ để tránh lọc nhầm hãng cũ.
+                    if (busSelect) {
+                        busSelect.value = '';
+                    }
+
+                    document.querySelectorAll('.js-company-option').forEach(function (item) {
+                        item.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                });
+            });
+        });
+    </script>
+}

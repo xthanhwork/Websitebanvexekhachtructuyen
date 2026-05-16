@@ -1,0 +1,219 @@
+@model DOANCOSO26.Models.ProfileViewModel
+@{
+    ViewData["Title"] = "Tài khoản cá nhân";
+    var avatar = string.IsNullOrWhiteSpace(Model.AvatarUrl) ? null : Model.AvatarUrl;
+}
+
+<style>
+    .profile-page-wrap {
+        background: #f2f3f7;
+        padding: 28px 0 60px;
+    }
+
+    .profile-card {
+        border: 1px solid #e3e6ef;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+    }
+
+    .profile-avatar-box {
+        text-align: center;
+        padding: 28px 20px;
+    }
+
+    .profile-avatar {
+        width: 126px;
+        height: 126px;
+        margin: 0 auto 16px;
+        border-radius: 50%;
+        overflow: hidden;
+        background: linear-gradient(135deg, #f3d7cf, #f5f0ff);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 56px;
+        color: #ff9f24;
+    }
+
+    .profile-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .profile-info-row {
+        display: grid;
+        grid-template-columns: 150px 1fr;
+        align-items: center;
+        gap: 14px;
+        padding: 13px 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .profile-info-row label {
+        margin: 0;
+        font-weight: 700;
+            color: #ff9f24;
+    }
+
+    .profile-social-row {
+        display: grid;
+        grid-template-columns: 34px 1fr;
+        align-items: center;
+        gap: 10px;
+        padding: 11px 14px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .profile-social-row:last-child,
+    .profile-info-row:last-child {
+        border-bottom: 0;
+    }
+
+    .profile-section-title {
+        background: linear-gradient(135deg, #ff9f24, #2840bf);
+        color: #fff;
+        padding: 14px 18px;
+        font-size: 22px;
+        font-weight: 800;
+    }
+
+    .profile-action-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: flex-end;
+        padding-top: 20px;
+    }
+
+    .profile-action-bar .btn-primary-custom {
+            background: #ff9f24;
+        color: #fff;
+            border: 1px solid #ff9f24;
+    }
+
+    .profile-action-bar .btn-primary-custom:hover {
+                background: #ff9f24;
+        color: #fff;
+    }
+</style>
+
+<section class="profile-page-wrap">
+    <div class="container">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success shadow-sm">@TempData["SuccessMessage"]</div>
+        }
+
+        <form asp-action="Index" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <div class="profile-card mb-4">
+                        <div class="profile-avatar-box">
+                            <div class="profile-avatar">
+                                @if (!string.IsNullOrWhiteSpace(avatar))
+                                {
+                                    <img src="@avatar" alt="Avatar" />
+                                }
+                                else
+                                {
+                                    <span>👤</span>
+                                }
+                            </div>
+                            <h3 class="fw-bold mb-2">@(string.IsNullOrWhiteSpace(Model.FullName) ? "Tài khoản" : Model.FullName)</h3>
+                            <p class="text-muted mb-3">@(string.IsNullOrWhiteSpace(Model.Address) ? "Chưa cập nhật địa chỉ" : Model.Address)</p>
+                            <div class="d-flex justify-content-center gap-2">
+                                <a asp-controller="Chat" asp-action="CustomerChat" class="btn btn-outline-primary btn-sm">Message</a>
+                                <a asp-controller="Reservation" asp-action="ViewMyBookings" class="btn btn-outline-primary btn-sm">Vé của tôi</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profile-card">
+                        <div class="profile-social-row">
+                            <span>🌐</span>
+                            <input asp-for="WebsiteUrl" class="form-control" placeholder="https://website-cua-ban.com" />
+                        </div>
+                        <div class="profile-social-row">
+                            <span>🐙</span>
+                            <input asp-for="GitHubUrl" class="form-control" placeholder="GitHub hoặc link GitHub" />
+                        </div>
+                        <div class="profile-social-row">
+                            <span>🐦</span>
+                            <input asp-for="TwitterUrl" class="form-control" placeholder="Twitter/X hoặc link" />
+                        </div>
+                        <div class="profile-social-row">
+                            <span>📷</span>
+                            <input asp-for="InstagramUrl" class="form-control" placeholder="Instagram hoặc link" />
+                        </div>
+                        <div class="profile-social-row">
+                            <span>f</span>
+                            <input asp-for="FacebookUrl" class="form-control" placeholder="Facebook hoặc link" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-8">
+                    <div class="profile-card">
+                        <div class="profile-section-title">Quản lý tài khoản cá nhân</div>
+                        <div class="p-4">
+                            <div class="profile-info-row">
+                                <label asp-for="FullName"></label>
+                                <div>
+                                    <input asp-for="FullName" class="form-control" />
+                                    <span asp-validation-for="FullName" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                            <div class="profile-info-row">
+                                <label asp-for="Email"></label>
+                                <div>
+                                    <input asp-for="Email" class="form-control" />
+                                    <span asp-validation-for="Email" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                            <div class="profile-info-row">
+                                <label asp-for="PhoneNumber"></label>
+                                <div>
+                                    <input asp-for="PhoneNumber" class="form-control" placeholder="Số điện thoại chính" />
+                                    <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                            <div class="profile-info-row">
+                                <label asp-for="Mobile"></label>
+                                <input asp-for="Mobile" class="form-control" placeholder="Số di động khác nếu có" />
+                            </div>
+
+                            <div class="profile-info-row">
+                                <label asp-for="Address"></label>
+                                <input asp-for="Address" class="form-control" placeholder="Địa chỉ cá nhân" />
+                            </div>
+
+                            <div class="profile-info-row">
+                                <label asp-for="AvatarUrl"></label>
+                                <input asp-for="AvatarUrl" class="form-control" placeholder="Dán link ảnh đại diện nếu muốn đổi ảnh" />
+                            </div>
+
+                            <div class="profile-action-bar">
+                                <button type="submit" class="btn btn-primary-custom px-4">Lưu thay đổi</button>
+                                <a asp-action="ChangePassword" class="btn btn-outline-secondary">Đổi mật khẩu</a>
+                                <a asp-controller="Home" asp-action="Index" class="btn btn-outline-primary">Trang chủ</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

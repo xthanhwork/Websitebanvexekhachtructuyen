@@ -1,0 +1,163 @@
+﻿@model DOANCOSO26.Models.Bus
+@using System.Text.Json
+
+@{
+    var companies = ViewBag.CompanyList as List<string> ?? new List<string>();
+    var types = ViewBag.TypeList as List<string> ?? new List<string>();
+}
+
+<div class="bus-form-page">
+    <div class="bus-form-card">
+        <h2>Sửa thông tin xe</h2>
+        <p class="text-muted">Chọn lại hãng xe, loại xe và biển số xe nếu cần thay đổi.</p>
+
+        <form asp-action="Update" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="OperatingStatus" />
+
+            <div class="form-group mb-3">
+                <label asp-for="Company" class="control-label">Hãng xe</label>
+                <select asp-for="Company" id="Company" class="form-control">
+                    <option value="">-- Chọn hãng xe --</option>
+                    @foreach (var company in companies)
+                    {
+                        <option value="@company" selected="@(Model.Company == company ? "selected" : null)">@company</option>
+                    }
+                </select>
+                <span asp-validation-for="Company" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="BusType" class="control-label">Loại xe</label>
+                <select asp-for="BusType" id="BusType" class="form-control">
+                    <option value="">-- Chọn loại xe --</option>
+                    @foreach (var type in types)
+                    {
+                        <option value="@type" selected="@(Model.BusType?.ToString() == type ? "selected" : null)">@type</option>
+                    }
+                </select>
+                <span asp-validation-for="BusType" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="BusNumber" class="control-label">Biển số xe</label>
+                <select asp-for="BusNumber" id="BusNumber" class="form-control">
+                    <option value="">-- Chọn biển số xe --</option>
+                </select>
+                <small class="form-text text-muted">Danh sách biển số sẽ tự đổi theo hãng xe và loại xe đã chọn.</small>
+                <span asp-validation-for="BusNumber" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mt-4">
+                <input type="submit" value="Lưu thay đổi" class="btn btn-primary" />
+                <a asp-action="Index" class="btn btn-light ms-2">Quay lại danh sách</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .bus-form-page {
+        width: 100%;
+        padding: 18px 0 40px 0;
+    }
+
+    .bus-form-card {
+        width: 620px;
+        max-width: 620px;
+        margin: 0;
+        background: transparent;
+        border-radius: 0;
+        padding: 0;
+        box-shadow: none;
+    }
+
+        .bus-form-card h2 {
+            text-align: left;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .bus-form-card .text-muted {
+            text-align: left;
+            margin-bottom: 24px;
+        }
+
+        .bus-form-card .form-control {
+            max-width: 600px;
+        }
+
+        .bus-form-card .btn-primary {
+            background: #4f46ad;
+            border-color: #4f46ad;
+            border-radius: 10px;
+            padding: 9px 22px;
+        }
+</style>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        const selectedBusNumber = @Html.Raw(JsonSerializer.Serialize(Model.BusNumber ?? ""));
+        const selectedBusType = @Html.Raw(JsonSerializer.Serialize(Model.BusType?.ToString() ?? ""));
+        const companySelect = document.getElementById('Company');
+        const typeSelect = document.getElementById('BusType');
+        const busNumberSelect = document.getElementById('BusNumber');
+        const getBusNumbersUrl = '@Url.Action("GetBusNumbers", "Bus", new { area = "Admin" })';
+
+        async function loadBusNumbers() {
+            const company = companySelect.value;
+            const busType = typeSelect.value;
+
+            busNumberSelect.innerHTML = '<option value="">-- Chọn biển số xe --</option>';
+
+            if (!company) {
+                return;
+            }
+
+            const response = await fetch(`${getBusNumbersUrl}?company=${encodeURIComponent(company)}&busType=${encodeURIComponent(busType)}`);
+            const data = await response.json();
+            let hasCurrentBusNumber = false;
+
+            data.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.busNumber;
+                option.textContent = `${item.busNumber} - ${item.busType}`;
+                option.dataset.type = item.busType;
+
+                if (item.busNumber === selectedBusNumber) {
+                    option.selected = true;
+                    hasCurrentBusNumber = true;
+                }
+
+                busNumberSelect.appendChild(option);
+            });
+
+            if (selectedBusNumber && !hasCurrentBusNumber) {
+                const option = document.createElement('option');
+                option.value = selectedBusNumber;
+                option.textContent = `${selectedBusNumber}${selectedBusType ? ' - ' + selectedBusType : ''}`;
+                option.dataset.type = selectedBusType;
+                option.selected = true;
+                busNumberSelect.appendChild(option);
+            }
+        }
+
+        busNumberSelect.addEventListener('change', function () {
+            const selectedOption = this.options[this.selectedIndex];
+            const type = selectedOption?.dataset?.type;
+
+            if (type) {
+                typeSelect.value = type;
+            }
+        });
+
+        companySelect.addEventListener('change', loadBusNumbers);
+        typeSelect.addEventListener('change', loadBusNumbers);
+        document.addEventListener('DOMContentLoaded', loadBusNumbers);
+    </script>
+}

@@ -1,0 +1,95 @@
+@model IEnumerable<DOANCOSO26.Models.BusTrip>
+@using DOANCOSO26.Models
+
+@{
+    ViewData["Title"] = "Lịch trình tài xế";
+    string StatusText(StatusTrip? status) => status switch
+    {
+        StatusTrip.Running => "Đang chạy",
+        StatusTrip.Departed => "Đã hoàn tất",
+        _ => "Chưa xuất phát"
+    };
+
+    string StatusClass(StatusTrip? status) => status switch
+    {
+        StatusTrip.Running => "badge bg-warning text-dark",
+        StatusTrip.Departed => "badge bg-success",
+        _ => "badge bg-primary"
+    };
+}
+
+<div class="container py-5 driver-schedule-page">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Lịch trình được phân công</h2>
+            <p class="text-muted mb-0">Tài xế chỉ thao tác được các chuyến xe được admin gán cho tài khoản của mình.</p>
+        </div>
+        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">Trở về trang chủ</a>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+
+    @if (Model == null || !Model.Any())
+    {
+        <div class="alert alert-info">Hiện tại tài khoản tài xế này chưa được phân công chuyến xe nào.</div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var item in Model.OrderBy(x => x.DepartureDate).ThenBy(x => x.DepartureTime))
+            {
+                <div class="col-12">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body">
+                            <div class="row align-items-center g-3">
+                                <div class="col-lg-7">
+                                    <div class="d-flex gap-3 align-items-center">
+                                        <img src="@(string.IsNullOrWhiteSpace(item.ImageUrl) ? "/images/logo1.jpg" : item.ImageUrl)" alt="bus" class="rounded border" style="width:80px;height:80px;object-fit:cover;" />
+                                        <div>
+                                            <h5 class="mb-2">@item.BusRoute?.StartStop?.Name - @item.BusRoute?.EndStop?.Name</h5>
+                                            <div class="text-muted small">
+                                                <span class="me-3"><i class="fa fa-clock text-primary me-1"></i>@item.DepartureTime.ToString("HH:mm")</span>
+                                                <span class="me-3"><i class="fa fa-calendar text-primary me-1"></i>@item.DepartureDate.ToString("dd/MM/yyyy")</span>
+                                                <span><i class="fa fa-bus text-primary me-1"></i>@item.Bus?.BusNumber - @item.Bus?.Company</span>
+                                            </div>
+                                            <div class="mt-2">
+                                                <span class="@StatusClass(item.TripStatus)">@StatusText(item.TripStatus)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-5 text-lg-end">
+                                    <a class="btn btn-outline-primary me-2 mb-2" asp-action="DisplayDriver" asp-route-id="@item.Id">Xem chi tiết</a>
+
+                                    @if (item.TripStatus == null || item.TripStatus == StatusTrip.NotYetDeparted)
+                                    {
+                                        <form asp-action="StartTrip" asp-route-id="@item.Id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-success mb-2" onclick="return confirm('Bạn muốn bắt đầu chuyến xe này?');">Bắt đầu chuyến</button>
+                                        </form>
+                                    }
+                                    else if (item.TripStatus == StatusTrip.Running)
+                                    {
+                                        <a class="btn btn-warning mb-2" asp-action="CreateReport" asp-route-id="@item.Id">Cập nhật / Tạo phiếu báo cáo</a>
+                                    }
+                                    else if (item.TripStatus == StatusTrip.Departed)
+                                    {
+                                        <span class="btn btn-secondary disabled mb-2">Chuyến đã hoàn tất</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

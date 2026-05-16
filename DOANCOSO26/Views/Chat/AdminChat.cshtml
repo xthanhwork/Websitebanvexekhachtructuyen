@@ -1,0 +1,148 @@
+﻿@model DOANCOSO26.Models.ChatAdminViewModel
+@{
+    ViewData["Title"] = "Admin Chat";
+}
+
+<div class="container-fluid py-4">
+    <h2 class="mb-4">Chat Realtime hỗ trợ khách hàng</h2>
+    <div class="row g-3">
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header text-white" style="background:#ff9f24;">Danh sách khách hàng</div>
+                <div class="list-group list-group-flush" style="max-height:620px;overflow-y:auto;">
+                    @if (!Model.Threads.Any())
+                    {
+                        <div class="p-3 text-muted">Chưa có cuộc trò chuyện nào.</div>
+                    }
+                    @foreach (var thread in Model.Threads)
+                    {
+                        var active = thread.CustomerId == Model.SelectedCustomerId;
+                        <a class="list-group-item list-group-item-action @(active ? "active" : "")" asp-action="AdminChat" asp-route-customerId="@thread.CustomerId">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong>@thread.CustomerName</strong>
+                                @if (thread.UnreadCount > 0)
+                                {
+                                    <span class="badge bg-danger">@thread.UnreadCount</span>
+                                }
+                            </div>
+                            <small>@thread.CustomerEmail</small>
+                            <div class="small text-truncate">@thread.LastMessage</div>
+                            <small>@thread.LastMessageAt.ToString("dd/MM/yyyy HH:mm")</small>
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header text-white" style="background:#ff9f24;">
+                    @if (!string.IsNullOrWhiteSpace(Model.SelectedCustomerId))
+                    {
+                        <span>Đang hỗ trợ: <strong>@Model.SelectedCustomerName</strong></span>
+                    }
+                    else
+                    {
+                        <span>Chọn khách hàng để trả lời</span>
+                    }
+                </div>
+                <div id="chatMessages" class="card-body" style="height:520px;overflow-y:auto;background:#f7f8ff;">
+                    @foreach (var item in Model.Messages)
+                    {
+                        var isAdmin = item.SenderRole == DOANCOSO26.Models.Roles.Role_Admin;
+                        <div class="mb-3 d-flex @(isAdmin ? "justify-content-end" : "justify-content-start")">
+                            <div class="p-3 rounded-4 shadow-sm" style="max-width:75%;background:@(isAdmin ? "#03045e" : "#ffffff");color:@(isAdmin ? "#ffffff" : "#111827");">
+                                <div class="fw-bold">@item.SenderName</div>
+                                <div>@item.MessageText</div>
+                                <small style="opacity:.75">@item.SentAt.ToString("dd/MM/yyyy HH:mm")</small>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="card-footer bg-white">
+                    @if (!string.IsNullOrWhiteSpace(Model.SelectedCustomerId))
+                    {
+                        <div class="input-group">
+                            <input id="messageInput" class="form-control" placeholder="Nhập phản hồi cho khách hàng..." autocomplete="off" />
+                            <button id="sendButton" class="btn text-white" style="background:#ff9f24;">Gửi</button>
+                        </div>
+                        <div id="chatError" class="text-danger mt-2 small"></div>
+                    }
+                    else
+                    {
+                        <div class="text-muted">Chưa có khách hàng nào nhắn tin.</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
+    <script>
+        const selectedCustomerId = "@Model.SelectedCustomerId";
+        const chatMessages = document.getElementById("chatMessages");
+        const chatError = document.getElementById("chatError");
+        const input = document.getElementById("messageInput");
+
+        function scrollBottom() {
+            if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function addMessage(message) {
+            if (!selectedCustomerId || message.conversationId !== selectedCustomerId) {
+                return;
+            }
+            const isAdmin = message.senderRole === "Admin";
+            const wrapper = document.createElement("div");
+            wrapper.className = "mb-3 d-flex " + (isAdmin ? "justify-content-end" : "justify-content-start");
+            const bubble = document.createElement("div");
+            bubble.className = "p-3 rounded-4 shadow-sm";
+            bubble.style.maxWidth = "75%";
+            bubble.style.background = isAdmin ? "#03045e" : "#ffffff";
+            bubble.style.color = isAdmin ? "#ffffff" : "#111827";
+            bubble.innerHTML = `<div class="fw-bold"></div><div></div><small style="opacity:.75"></small>`;
+            bubble.children[0].textContent = message.senderName;
+            bubble.children[1].textContent = message.messageText;
+            bubble.children[2].textContent = message.sentAt;
+            wrapper.appendChild(bubble);
+            chatMessages.appendChild(wrapper);
+            scrollBottom();
+        }
+
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/chatHub")
+            .withAutomaticReconnect()
+            .build();
+
+        connection.on("ReceiveAdminMessage", addMessage);
+
+        connection.start().then(async () => {
+            scrollBottom();
+            if (selectedCustomerId) {
+                await connection.invoke("MarkConversationRead", selectedCustomerId);
+            }
+        }).catch(err => {
+            if (chatError) chatError.textContent = err.toString();
+        });
+
+        async function sendMessage() {
+            const message = input.value.trim();
+            if (!selectedCustomerId || !message) return;
+            input.value = "";
+            if (chatError) chatError.textContent = "";
+            try {
+                await connection.invoke("SendAdminMessage", selectedCustomerId, message);
+            } catch (err) {
+                if (chatError) chatError.textContent = err.toString();
+            }
+        }
+
+        if (document.getElementById("sendButton")) {
+            document.getElementById("sendButton").addEventListener("click", sendMessage);
+            input.addEventListener("keydown", e => {
+                if (e.key === "Enter") sendMessage();
+            });
+        }
+    </script>
+}

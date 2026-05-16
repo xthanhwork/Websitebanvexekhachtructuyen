@@ -1,0 +1,12 @@
+﻿@{
+    ViewData["Title"] = "Thanh toán thất bại";
+}
+
+<div class="container py-5 text-center">
+    <div class="alert alert-danger mx-auto" style="max-width:720px;">
+        <h3 class="mb-3">Thanh toán không thành công</h3>
+        <p>@(TempData["Message"] ?? "Giao dịch VNPAY thất bại hoặc đã bị hủy.")</p>
+        <a asp-controller="Reservation" asp-action="ViewMyBookings" class="btn btn-primary mt-3">Xem vé của tôi</a>
+        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary mt-3">Về trang chủ</a>
+    </div>
+</div>

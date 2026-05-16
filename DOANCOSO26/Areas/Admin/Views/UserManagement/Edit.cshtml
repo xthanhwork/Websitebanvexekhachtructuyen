@@ -1,0 +1,52 @@
+@model DOANCOSO26.Models.EditUserViewModel
+@{
+    ViewData["Title"] = "Sửa tài khoản";
+}
+
+<h1 class="mt-4 mb-3">Sửa tài khoản và phân quyền</h1>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form asp-action="Edit" method="post">
+            @Html.AntiForgeryToken()
+            <input asp-for="Id" type="hidden" />
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="mb-3">
+                <label asp-for="FullName" class="form-label"></label>
+                <input asp-for="FullName" class="form-control" />
+                <span asp-validation-for="FullName" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="PhoneNumber" class="form-label"></label>
+                <input asp-for="PhoneNumber" class="form-control" />
+                <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Role" class="form-label"></label>
+                <select asp-for="Role" class="form-select">
+                    @foreach (var role in Model.AvailableRoles)
+                    {
+                        <option value="@role">@role</option>
+                    }
+                </select>
+                <span asp-validation-for="Role" class="text-danger"></span>
+            </div>
+            <div class="form-check mb-4">
+                <input asp-for="IsLocked" class="form-check-input" />
+                <label asp-for="IsLocked" class="form-check-label">Khóa tài khoản này</label>
+            </div>
+            <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+            <a asp-action="Index" class="btn btn-secondary">Quay lại</a>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

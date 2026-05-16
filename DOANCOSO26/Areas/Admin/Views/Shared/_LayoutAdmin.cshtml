@@ -1,0 +1,144 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="description" content="" />
+    <meta name="author" content="" />
+    <title>Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet" />
+    <link href="~/Admin/css/styles.css" rel="stylesheet" />
+    <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="~/Dash/vendors/feather/feather.css">
+    <link rel="stylesheet" href="~/Dash/vendors/ti-icons/css/themify-icons.css">
+    <link rel="stylesheet" href="~/Dash/vendors/css/vendor.bundle.base.css">
+    <!-- endinject -->
+    <!-- Plugin css for this page -->
+    <link rel="stylesheet" href="~/Dash/vendors/datatables.net-bs4/dataTables.bootstrap4.css">
+    <link rel="stylesheet" href="~/Dash/vendors/ti-icons/css/themify-icons.css">
+    <link rel="stylesheet" type="~/Dash/text/css" href="~/Dash/js/select.dataTables.min.css">
+    <!-- End plugin css for this page -->
+    <!-- inject:css -->
+    <link rel="stylesheet" href="~/Dash/css/vertical-layout-light/style.css">
+    <!-- endinject -->
+    <link rel="shortcut icon" href="/images/logopage.png" />
+</head>
+<body class="sb-nav-fixed">
+    <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
+        <!-- Navbar Brand-->
+        <a class="navbar-brand ps-3" asp-area="" asp-controller="Home" asp-action="Index">
+            <img src="/images/logo2.png" style="max-width:160px; max-height:50px; width:auto; height:auto; object-fit:contain;" />
+        </a>
+        <!-- Sidebar Toggle-->
+        <button class="btn btn-link btn-sm order-1 order-lg-0 me-4 me-lg-0" id="sidebarToggle" href="#!"><i class="fas fa-bars"></i></button>
+        <!-- Navbar Search-->
+        <form class="d-none d-md-inline-block form-inline ms-auto me-0 me-md-3 my-2 my-md-0">
+            <div class="input-group">
+                <input class="form-control" type="text" placeholder="Search for..." aria-label="Search for..." aria-describedby="btnNavbarSearch" />
+                <button class="btn btn-primary" id="btnNavbarSearch" type="button"><i class="fas fa-search"></i></button>
+            </div>
+        </form>
+        <!-- Navbar-->
+        <ul class="navbar-nav ms-auto ms-md-0 me-3 me-lg-4">
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" id="navbarDropdown" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-user fa-fw"></i></a>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                    <li><a class="dropdown-item" asp-area="" asp-controller="Profile" asp-action="Index">Tài khoản cá nhân</a></li>
+                    <li><a class="dropdown-item" href="#!">Activity Log</a></li>
+                    <li><hr class="dropdown-divider" /></li>
+                    <li><a class="dropdown-item" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">Logout</a></li>
+                </ul>
+            </li>
+        </ul>
+    </nav>
+    <div id="layoutSidenav">
+        <div id="layoutSidenav_nav">
+            <nav class="sb-sidenav accordion sb-sidenav-dark" id="sidenavAccordion">
+                <div class="sb-sidenav-menu">
+                    <div class="nav">
+                        <div class="sb-sidenav-menu-heading">Manage</div>
+                        <a class="nav-link" asp-area="Admin" asp-controller="Bus" asp-action="Dash">
+                            <div class="sb-nav-link-icon"><i class="fas fa-list-alt"></i></div>
+                            DashBroad
+                        </a>
+                        <a class="nav-link" asp-area="Admin" asp-controller="BusRoute" asp-action="Index">
+                            <div class="sb-nav-link-icon"><i class="fa-solid fa-route"></i></div>
+                            Quản lý tuyến đường
+                        </a>
+                        <a class="nav-link" asp-area="Admin" asp-controller="Bus" asp-action="Index">
+                            <div class="sb-nav-link-icon"><i class="fas fa-bus"></i></div>
+                            Quản lý xe
+                        </a>
+
+
+                        <a class="nav-link" asp-area="Admin" asp-controller="Stop" asp-action="Index">
+                            <div class="sb-nav-link-icon"><i class="fas fa-stop-circle"></i></div>
+                            Quản lý trạm dừng
+                        </a>
+                        <a class="nav-link" asp-area="Admin" asp-controller="BusTrip" asp-action="Index">
+                            <div class="sb-nav-link-icon"><i class="fas fa-luggage-cart"></i></div>
+                            Quản lý chuyến xe
+                        </a>
+                        <a class="nav-link" asp-area="Admin" asp-controller="Booking" asp-action="Index">
+                            <div class="sb-nav-link-icon"><i class="fas fa-ticket-alt"></i></div>
+                            Quản lý đặt vé
+                        </a>
+                        <a class="nav-link" asp-area="Admin" asp-controller="UserManagement" asp-action="Index">
+                            <div class="sb-nav-link-icon"><i class="fas fa-users"></i></div>
+                            Quản lý nhân viên - khách hàng
+                        </a>
+                        <a class="nav-link" asp-area="Admin" asp-controller="UserManagement" asp-action="Roles">
+                            <div class="sb-nav-link-icon"><i class="fas fa-user-shield"></i></div>
+                            Quản lý phân quyền
+                        </a>
+                        <a class="nav-link" asp-area="" asp-controller="Chat" asp-action="AdminChat">
+                            <div class="sb-nav-link-icon"><i class="fas fa-comments"></i></div>
+                            Chat hỗ trợ
+                        </a>
+
+
+                    </div>
+                </div>
+                <div class="sb-sidenav-footer">
+                    <div class="small">Logged in as:</div>
+                    Start Bootstrap
+                </div>
+            </nav>
+        </div>
+        <div id="layoutSidenav_content">
+            <main>
+                <div class="container-fluid px-4">
+                    @RenderBody()
+                </div>
+            </main>
+
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="~/Admin/js/scripts.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/umd/simple-datatables.min.js" crossorigin="anonymous"></script>
+    <script src="~/Dash/vendors/js/vendor.bundle.base.js"></script>
+    <!-- endinject -->
+    <!-- Plugin js for this page -->
+    <script src="~/Dash/vendors/chart.js/Chart.min.js"></script>
+    <script src="~/Dash/vendors/datatables.net/jquery.dataTables.js"></script>
+    <script src="~/Dash/vendors/datatables.net-bs4/dataTables.bootstrap4.js"></script>
+    <script src="~/Dash/js/dataTables.select.min.js"></script>
+
+    <!-- End plugin js for this page -->
+    <!-- inject:js -->
+    <script src="~/Dash/js/off-canvas.js"></script>
+    <script src="~/Dash/js/hoverable-collapse.js"></script>
+    <script src="~/Dash/js/template.js"></script>
+    <script src="~/Dash/js/settings.js"></script>
+    <script src="~/Dash/js/todolist.js"></script>
+    <!-- endinject -->
+    <!-- Custom js for this page-->
+    <script src="~/Dash/js/dashboard.js"></script>
+    <script src="~/Dash/js/Chart.roundedBarCharts.js"></script>
+    <script src="~/js/site-language.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

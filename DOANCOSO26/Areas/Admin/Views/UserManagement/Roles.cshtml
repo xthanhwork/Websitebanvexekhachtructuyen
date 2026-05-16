@@ -1,0 +1,43 @@
+@model List<Microsoft.AspNetCore.Identity.IdentityRole>
+@{
+    ViewData["Title"] = "Quản lý quyền";
+}
+
+<h1 class="mt-4 mb-3">Quản lý tài khoản và phân quyền</h1>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-header fw-bold">Thêm quyền mới</div>
+            <div class="card-body">
+                <form asp-action="CreateRole" method="post" class="d-flex gap-2">
+                    @Html.AntiForgeryToken()
+                    <input name="roleName" class="form-control" placeholder="Ví dụ: Staff" />
+                    <button type="submit" class="btn btn-primary">Thêm</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-header fw-bold">Danh sách quyền hiện có</div>
+            <div class="card-body">
+                <table class="table table-bordered">
+                    <thead class="table-dark"><tr><th>Tên quyền</th></tr></thead>
+                    <tbody>
+                        @foreach (var role in Model)
+                        {
+                            <tr><td>@role.Name</td></tr>
+                        }
+                    </tbody>
+                </table>
+                <a asp-action="Index" class="btn btn-secondary">Quay lại quản lý tài khoản</a>
+            </div>
+        </div>
+    </div>
+</div>

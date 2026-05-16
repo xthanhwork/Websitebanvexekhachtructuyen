@@ -1,0 +1,70 @@
+@model DOANCOSO26.Models.BusRoute
+
+<h4>Road</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="Update" method="post" enctype="multipart/form-data">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" asp-for="Id" />
+
+            <div class="form-group">
+                <label class="control-label">Điểm đi</label>
+
+                <select asp-for="StartStopId"
+                        asp-items="ViewBag.StartStopId"
+                        class="form-control">
+
+                    <option value="">-- Chọn điểm đi --</option>
+                </select>
+
+                <span asp-validation-for="StartStopId"
+                      class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label class="control-label">Điểm đến</label>
+
+                <select asp-for="EndStopId"
+                        asp-items="ViewBag.EndStopId"
+                        class="form-control">
+
+                    <option value="">-- Chọn điểm đến --</option>
+                </select>
+
+                <span asp-validation-for="EndStopId"
+                      class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Time" class="control-label"></label>
+                <input asp-for="Time" class="form-control" />
+                <span asp-validation-for="Time" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Distance" class="control-label"></label>
+                <input asp-for="Distance" class="form-control" />
+                <span asp-validation-for="Distance" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Price" class="control-label">Giá vé tuyến / Giá trước điều chỉnh</label>
+                <input asp-for="Price" class="form-control" placeholder="Ví dụ: 150000" />
+                <span asp-validation-for="Price" class="text-danger"></span>
+                <small class="text-muted">Giá này sẽ được lấy làm giá gốc khi tạo chuyến xe. Ở mục chuyến xe có thể nhập % điều chỉnh giá: số dương để tăng giá, số âm để giảm giá.</small>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="Save" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+    <div id="map" style="height: 500px;"></div>
+</div>
+
+<div>
+    <a asp-action="Index">Back to List</a>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

@@ -1,0 +1,160 @@
+@model DOANCOSO26.Models.BusRoute
+
+@{
+    ViewData["Title"] = "Add Route";
+}
+
+<h1>Add Route</h1>
+
+<h4>Route</h4>
+<hr />
+<div class="row">
+    <div class="col-md-6">
+        <form asp-action="Add" method="post" enctype="multipart/form-data">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label>Điểm đi</label>
+
+                <select asp-for="StartStopId"
+                        asp-items="ViewBag.StartStopId"
+                        class="form-control">
+
+                    <option value="">-- Chọn điểm đi --</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Điểm đến</label>
+
+                <select asp-for="EndStopId"
+                        asp-items="ViewBag.EndStopId"
+                        class="form-control">
+
+                    <option value="">-- Chọn điểm đến --</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Time" class="control-label"></label>
+                <input asp-for="Time" id="Time" class="form-control" />
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Distance" class="control-label"></label>
+                <input asp-for="Distance" id="Distance" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label asp-for="Price" class="control-label">Giá vé tuyến / Giá trước điều chỉnh</label>
+                <input asp-for="Price" class="form-control" placeholder="Ví dụ: 150000" />
+                <span asp-validation-for="Price" class="text-danger"></span>
+                <small class="text-muted">Giá này sẽ được lấy làm giá gốc khi tạo chuyến xe. Ở mục chuyến xe có thể nhập % điều chỉnh giá: số dương để tăng giá, số âm để giảm giá.</small>
+            </div>
+            <div class="form-group">
+                <label asp-for="ImageUrl" class="control-label">Ảnh chuyến ::</label>
+                <input type="file" asp-for="ImageUrl" class="form-control" />
+                <span asp-validation-for="ImageUrl" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label for="SearchedLatitude" class="control-label">Searched Latitude</label>
+                <input id="SearchedLatitude" class="form-control" readonly />
+            </div>
+            <div class="form-group">
+                <label for="SearchedLongitude" class="control-label">Searched Longitude</label>
+                <input id="SearchedLongitude" class="form-control" readonly />
+            </div>
+            <div class="form-group">
+                <input type="submit" value="Create" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+    <div class="col-md-6">
+        <div class="form-group">
+            <input type="text" id="searchBox" class="form-control" placeholder="Nhập địa chỉ để tìm kiếm..." />
+        </div>
+        <div id="map" style="height: 500px;"></div>
+    </div>
+</div>
+
+<div>
+    <a asp-action="Index">Back to List</a>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+
+    <script>
+        var map = L.map('map').setView([10.8231, 106.6297], 10); // Tọa độ mặc định của Hồ Chí Minh
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        var geocoder = L.Control.geocoder({
+            defaultMarkGeocode: true,
+            defaultMarkGeocodedBounds: true
+        }).addTo(map);
+
+        geocoder.on('markgeocode', function (e) {
+            map.fitBounds(e.geocode.bbox);
+            document.getElementById('SearchedLatitude').value = e.geocode.center.lat;
+            document.getElementById('SearchedLongitude').value = e.geocode.center.lng;
+        });
+
+    
+    </script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            function formatKm(km) {
+                    return parseFloat(km).toFixed(2) + " km";
+                }
+
+                function formatTime(totalMin) {
+                    let hours = Math.floor(totalMin / 60);
+                    let minutes = Math.round(totalMin % 60);
+
+                    if (hours > 0) {
+                        return hours + "h " + minutes + "m";
+                    }
+
+                    return minutes + "m";
+                }
+
+            function calculateDistance() {
+
+                var startId = $("#StartStopId").val();
+                var endId = $("#EndStopId").val();
+
+                if (!startId || !endId) return;
+
+                $.ajax({
+                    url: '/Admin/BusRoute/GetDistance',
+                    type: 'GET',
+                    data: {
+                        startId: startId,
+                        endId: endId
+                    },
+                    success: function (res) {
+
+                        console.log(res);
+                        $("#Distance").val(formatKm(res.distanceKm));
+                        $("#Time").val(formatTime(res.durationMin));
+                    },
+                    error: function (err) {
+                        console.log("Error:", err);
+                    }
+                });
+            }
+
+            $("#StartStopId, #EndStopId").change(function () {
+                calculateDistance();
+            });
+
+        });
+    </script>
+   
+}

@@ -1,0 +1,98 @@
+﻿@model List<DOANCOSO26.Models.ChatMessage>
+@{
+    ViewData["Title"] = "Chat hỗ trợ khách hàng";
+    var customerId = ViewBag.CustomerId as string;
+}
+
+<section class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow border-0 rounded-4 overflow-hidden">
+                <div class="card-header text-white d-flex justify-content-between align-items-center" style="background:#ff9f24;">
+                    <div>
+                        <h4 class="mb-0">Chat Realtime hỗ trợ khách hàng</h4>
+                        <small>Nhân viên hỗ trợ sẽ phản hồi trực tiếp tại đây.</small>
+                    </div>
+                    <span class="badge bg-success">Online</span>
+                </div>
+                <div id="chatMessages" class="card-body" style="height:420px;overflow-y:auto;background:#f7f8ff;">
+                    @foreach (var item in Model)
+                    {
+                        var isMine = item.SenderRole != DOANCOSO26.Models.Roles.Role_Admin;
+                        <div class="mb-3 d-flex @(isMine ? "justify-content-end" : "justify-content-start")">
+                            <div class="p-3 rounded-4 shadow-sm" style="max-width:75%;background:@(isMine ? "#03045e" : "#ffffff");color:@(isMine ? "#ffffff" : "#111827");">
+                                <div class="fw-bold">@item.SenderName</div>
+                                <div>@item.MessageText</div>
+                                <small style="opacity:.75">@item.SentAt.ToString("dd/MM/yyyy HH:mm")</small>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="card-footer bg-white">
+                    <div class="input-group">
+                        <input id="messageInput" class="form-control" placeholder="Nhập tin nhắn cần hỗ trợ..." autocomplete="off" />
+                        <button id="sendButton" class="btn text-white" style="background:#ff9f24;">Gửi</button>
+                    </div>
+                    <div id="chatError" class="text-danger mt-2 small"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
+    <script>
+        const chatMessages = document.getElementById("chatMessages");
+        const chatError = document.getElementById("chatError");
+        const input = document.getElementById("messageInput");
+
+        function scrollBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function addMessage(message) {
+            const isMine = message.senderRole !== "Admin";
+            const wrapper = document.createElement("div");
+            wrapper.className = "mb-3 d-flex " + (isMine ? "justify-content-end" : "justify-content-start");
+            const bubble = document.createElement("div");
+            bubble.className = "p-3 rounded-4 shadow-sm";
+            bubble.style.maxWidth = "75%";
+            bubble.style.background = isMine ? "#03045e" : "#ffffff";
+            bubble.style.color = isMine ? "#ffffff" : "#111827";
+            bubble.innerHTML = `<div class="fw-bold"></div><div></div><small style="opacity:.75"></small>`;
+            bubble.children[0].textContent = message.senderName;
+            bubble.children[1].textContent = message.messageText;
+            bubble.children[2].textContent = message.sentAt;
+            wrapper.appendChild(bubble);
+            chatMessages.appendChild(wrapper);
+            scrollBottom();
+        }
+
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/chatHub")
+            .withAutomaticReconnect()
+            .build();
+
+        connection.on("ReceiveCustomerMessage", addMessage);
+
+        connection.start().then(scrollBottom).catch(err => chatError.textContent = err.toString());
+
+        async function sendMessage() {
+            const message = input.value.trim();
+            if (!message) return;
+            input.value = "";
+            chatError.textContent = "";
+            try {
+                await connection.invoke("SendCustomerMessage", message);
+            } catch (err) {
+                chatError.textContent = err.toString();
+            }
+        }
+
+        document.getElementById("sendButton").addEventListener("click", sendMessage);
+        input.addEventListener("keydown", e => {
+            if (e.key === "Enter") sendMessage();
+        });
+    </script>
+}

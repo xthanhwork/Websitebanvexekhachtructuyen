@@ -1,0 +1,107 @@
+﻿@model DOANCOSO26.Models.BusRoute
+@{
+    ViewData["Title"] = "Display Route";
+}
+<h1>Display Route</h1>
+<div id="map" style="height: 500px;"></div>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Start Point</th>
+            <th>End Point</th>
+            <th>Start Latitude</th>
+            <th>Start Longitude</th>
+            <th>End Latitude</th>
+            <th>End Longitude</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        <tr>
+            <td>@Model.StartStop?.Name</td>
+            <td>@Model.EndStop?.Name</td>
+
+            <td>@Model.StartStop?.Latitude</td>
+            <td>@Model.StartStop?.Longitude</td>
+
+            <td>@Model.EndStop?.Latitude</td>
+            <td>@Model.EndStop?.Longitude</td>
+        </tr>
+    </tbody>
+</table>
+
+@section Scripts {
+
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+
+    <script>
+
+        var map = L.map('map').setView([
+            @Model.StartStop?.Latitude,
+            @Model.StartStop?.Longitude
+        ], 10);
+
+        L.tileLayer(
+            'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+            {
+                attribution:
+                '&copy; OpenStreetMap contributors'
+            }
+        ).addTo(map);
+
+        var start = L.latLng(
+            @Model.StartStop?.Latitude,
+            @Model.StartStop?.Longitude
+        );
+
+        var end = L.latLng(
+            @Model.EndStop?.Latitude,
+            @Model.EndStop?.Longitude
+        );
+
+        L.marker(start)
+            .addTo(map)
+            .bindPopup("Start: @Model.StartStop?.Name");
+
+        L.marker(end)
+            .addTo(map)
+            .bindPopup("End: @Model.EndStop?.Name");
+
+        L.Routing.control({
+            waypoints: [start, end],
+
+            routeWhileDragging: false,
+
+            fitSelectedRoutes: true,
+
+            showAlternatives: false,
+
+            lineOptions: {
+                styles: [
+                    {
+                        color: 'navy',
+                        opacity: 0.8,
+                        weight: 8
+                    }
+                ]
+            },
+
+            router: L.Routing.osrmv1({
+                serviceUrl:
+                'https://router.project-osrm.org/route/v1/',
+
+                profile: 'driving'
+            })
+
+        }).addTo(map);
+
+    </script>
+}

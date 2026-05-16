@@ -1,0 +1,129 @@
+@using Microsoft.AspNetCore.Mvc.Rendering
+@model DOANCOSO26.Models.RevenueReportViewModel
+
+@{
+    var fromDateValue = Model.FromDate?.ToString("yyyy-MM-dd");
+    var toDateValue = Model.ToDate?.ToString("yyyy-MM-dd");
+    var companies = ViewBag.Companies as IEnumerable<string> ?? Enumerable.Empty<string>();
+    var selectedCompanyLabel = string.IsNullOrWhiteSpace(Model.Company) ? "-- Tất cả hãng xe --" : Model.Company;
+}
+
+<div class="card shadow border-0 mt-4">
+    <div class="row">
+        <div class="col-12 text-center">
+            <h2>Báo cáo doanh thu theo hãng xe</h2>
+        </div>
+    </div>
+
+    <div class="card-body p-4">
+        <form id="revenueFilterForm" method="get" action="@Url.Action("RevenueReport", "BusTrip", new { area = "Admin" })" class="row g-3 align-items-end mb-4 p-3 border rounded bg-light">
+            <div class="col-md-3">
+                <label class="form-label">Hãng xe</label>
+                <input type="hidden" id="revenueCompanyValue" name="company" value="@Model.Company" />
+                <div class="dropdown w-100">
+                    <button class="btn btn-light border dropdown-toggle w-100 text-start" type="button" id="revenueCompanyButton" data-bs-toggle="dropdown" aria-expanded="false">
+                        @selectedCompanyLabel
+                    </button>
+                    <ul class="dropdown-menu w-100" aria-labelledby="revenueCompanyButton" style="max-height:260px; overflow-y:auto;">
+                        <li>
+                            <button class="dropdown-item js-revenue-company-option @(string.IsNullOrWhiteSpace(Model.Company) ? "active" : "")" type="button" data-value="">-- Tất cả hãng xe --</button>
+                        </li>
+                        @foreach (var companyName in companies)
+                        {
+                            <li>
+                                <button class="dropdown-item js-revenue-company-option @(string.Equals(Model.Company, companyName, StringComparison.OrdinalIgnoreCase) ? "active" : "")" type="button" data-value="@companyName">@companyName</button>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Từ ngày</label>
+                <input type="date" name="fromDate" value="@fromDateValue" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Đến ngày</label>
+                <input type="date" name="toDate" value="@toDateValue" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary">Xem báo cáo</button>
+                <a href="@Url.Action("RevenueReport", "BusTrip", new { area = "Admin" })" class="btn btn-secondary">Xóa lọc</a>
+            </div>
+        </form>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="border rounded p-3 bg-light">
+                    <div class="text-muted">Tổng số vé đã thanh toán</div>
+                    <h3>@Model.TotalTickets</h3>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="border rounded p-3 bg-light">
+                    <div class="text-muted">Tổng doanh thu</div>
+                    <h3>@Model.TotalRevenue.ToString("N0") VND</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Hãng xe</th>
+                        <th>Chuyến xe</th>
+                        <th>Biển số</th>
+                        <th>Tuyến đường</th>
+                        <th>Ngày / giờ chạy</th>
+                        <th>Số vé đã thanh toán</th>
+                        <th>Doanh thu</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr>
+                            <td>@row.Company</td>
+                            <td>@row.TripName</td>
+                            <td>@row.BusNumber</td>
+                            <td>@row.RouteName</td>
+                            <td>@row.DepartureDate.ToString("dd/MM/yyyy") @row.DepartureTime.ToString("HH:mm")</td>
+                            <td>@row.TicketCount</td>
+                            <td>@row.Revenue.ToString("N0") VND</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="5" class="text-end">Tổng cộng</th>
+                        <th>@Model.TotalTickets</th>
+                        <th>@Model.TotalRevenue.ToString("N0") VND</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const hiddenCompany = document.getElementById('revenueCompanyValue');
+            const labelButton = document.getElementById('revenueCompanyButton');
+
+            document.querySelectorAll('.js-revenue-company-option').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    const value = this.getAttribute('data-value') || '';
+                    hiddenCompany.value = value;
+                    labelButton.textContent = this.textContent.trim();
+
+                    document.querySelectorAll('.js-revenue-company-option').forEach(function (item) {
+                        item.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                });
+            });
+        });
+    </script>
+}

@@ -1,0 +1,89 @@
+@model DOANCOSO26.Models.UserManagementIndexViewModel
+@{
+    ViewData["Title"] = "Quản lý nhân viên - khách hàng";
+}
+
+<h1 class="mt-4 mb-3">Quản lý nhân viên – khách hàng</h1>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+
+<div class="card mb-4 shadow-sm">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label">Tìm kiếm</label>
+                <input name="search" value="@Model.Search" class="form-control" placeholder="Nhập tên, email hoặc số điện thoại" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Lọc theo quyền</label>
+                <select name="role" class="form-select">
+                    <option value="">Tất cả</option>
+                    @foreach (var role in Model.Roles)
+                    {
+                        <option value="@role" selected="@(role == Model.Role)">@role</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Lọc</button>
+                <a asp-action="Index" class="btn btn-secondary">Xóa lọc</a>
+                <a asp-action="Create" class="btn btn-success">Tạo tài khoản</a>
+                <a asp-action="Roles" class="btn btn-outline-primary">Quản lý quyền</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body table-responsive">
+        <table class="table table-bordered table-striped align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Họ tên</th>
+                    <th>Email</th>
+                    <th>Số điện thoại</th>
+                    <th>Quyền</th>
+                    <th>Trạng thái</th>
+                    <th style="width:220px">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Users.Any())
+                {
+                    <tr><td colspan="6" class="text-center text-muted">Không có tài khoản phù hợp.</td></tr>
+                }
+                @foreach (var user in Model.Users)
+                {
+                    <tr>
+                        <td>@user.FullName</td>
+                        <td>@user.Email</td>
+                        <td>@user.PhoneNumber</td>
+                        <td>@user.Roles</td>
+                        <td>
+                            @if (user.IsLocked)
+                            {
+                                <span class="badge bg-danger">Đã khóa</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">Đang hoạt động</span>
+                            }
+                        </td>
+                        <td>
+                            <a asp-action="Edit" asp-route-id="@user.Id" class="btn btn-sm btn-primary">Sửa / phân quyền</a>
+                            <form asp-action="ToggleLock" asp-route-id="@user.Id" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm @(user.IsLocked ? "btn-success" : "btn-warning")">
+                                    @(user.IsLocked ? "Mở khóa" : "Khóa")
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

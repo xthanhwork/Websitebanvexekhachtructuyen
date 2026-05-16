@@ -1,0 +1,80 @@
+﻿@model IEnumerable<DOANCOSO26.Models.Booking>
+
+@{
+    var phoneFilter = ViewBag.PhoneFilter as string;
+}
+
+<div class="card shadow border-0 mt-4">
+    <div class="row">
+        <div class="col-12 text-center">
+            <h2>Danh sách vé</h2>
+        </div>
+    </div>
+
+    <div class="card-body p-4">
+        <div class="row pb-3">
+            <div class="col-auto">
+                <a asp-action="Add" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Tạo vé mới
+                </a>
+            </div>
+        </div>
+
+        <form asp-action="Index" method="get" class="row g-3 align-items-end mb-4 p-3 border rounded bg-light">
+            <div class="col-md-4">
+                <label class="form-label">Lọc theo số điện thoại khách hàng</label>
+                <input type="text" name="phone" value="@phoneFilter" class="form-control" placeholder="Nhập SĐT khách hàng..." />
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary">Lọc</button>
+                <a asp-action="Index" class="btn btn-secondary">Xóa lọc</a>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Mã vé</th>
+                        <th>Ngày / giờ chuyến</th>
+                        <th>Khách hàng</th>
+                        <th>Số điện thoại</th>
+                        <th>Ngày đặt</th>
+                        <th>Tổng tiền</th>
+                        <th>Ghế</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="bookingList">
+                    @foreach (var item in Model)
+                    {
+                        var trip = item.Seat?.BusTrip;
+                        <tr>
+                            <td>@item.InvoiceCode</td>
+                            <td>
+                                @if (trip != null)
+                                {
+                                    <span>@trip.DepartureDate.ToString("dd/MM/yyyy") @trip.DepartureTime.ToString("HH:mm")</span>
+                                }
+                            </td>
+                            <td>@item.UserName</td>
+                            <td>@item.SDT</td>
+                            <td>@item.Timebooking.ToString("HH:mm dd/MM/yyyy")</td>
+                            <td>@item.TotalPrice.ToString("N0") VND</td>
+                            <td>@item.Seat?.SeatNumber</td>
+                            <td>@item.StatusBooking</td>
+                            <td>
+                                <a class="btn btn-primary btn-sm" asp-action="Display" asp-route-id="@item.Id">Chi tiết</a>
+                                @if (item.StatusBooking != StatusBooking.Paid)
+                                {
+                                    <a class="btn btn-success btn-sm" asp-action="UpdateStatus" asp-route-id="@item.Id">Thanh toán</a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,244 @@
+@model DOANCOSO26.Models.BusTrip
+@using DOANCOSO26.Models
+@using Microsoft.AspNetCore.Mvc.Rendering
+
+@{
+    var buses = ViewBag.Buses as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
+    var busEntities = ViewBag.BusEntities as IEnumerable<Bus> ?? Enumerable.Empty<Bus>();
+    var selectedBus = busEntities.FirstOrDefault(b => b.Id == Model?.BusId);
+    var selectedBusType = selectedBus?.BusType.ToString() ?? "";
+    var drivers = ViewBag.Drivers as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
+    var busRoutesList = ViewBag.BusRoutesList as IEnumerable<BusRoute> ?? Enumerable.Empty<BusRoute>();
+    var departureTimeText = ViewBag.DepartureTimeText as string;
+    var departureEndDate = ViewBag.DepartureEndDate as string;
+    var holidayDiscountPercent = ViewBag.HolidayDiscountPercent as string ?? "0";
+}
+
+@functions {
+    private static string OnlyNumber(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "0";
+        return new string(value.Where(char.IsDigit).ToArray());
+    }
+}
+
+<h4>BusTrip</h4>
+<hr />
+<div class="row">
+    <div class="col-md-6">
+        <form asp-action="Add" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="form-group mb-3">
+                <label asp-for="Name" class="control-label"></label>
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label class="control-label" for="BusLayoutType">Loại xe / sơ đồ ghế:</label>
+                <select id="BusLayoutType" name="BusLayoutType" class="form-control">
+                    <option value="">-- Chọn loại xe --</option>
+                    <option value="Limousine" selected="@(selectedBusType == "Limousine" ? "selected" : null)">Giường nằm Limousine</option>
+                    <option value="Standard" selected="@(selectedBusType == "Standard" ? "selected" : null)">Ghế ngồi</option>
+                </select>
+                <small class="form-text text-muted">
+                    Giường nằm Limousine sẽ dùng sơ đồ 2 tầng. Ghế ngồi sẽ dùng sơ đồ ghế ngồi thường.
+                </small>
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="BusId" class="control-label">Chọn biển số xe - nhà xe:</label>
+                <select asp-for="BusId" class="form-control" id="BusId">
+                    <option value="">-- Chọn biển số xe - nhà xe --</option>
+                    @foreach (var bus in busEntities)
+                    {
+                        var busTypeText = bus.BusType == BusType.Limousine ? "Giường nằm Limousine" : "Ghế ngồi";
+                        var selected = Model?.BusId == bus.Id ? "selected" : null;
+                        <option value="@bus.Id"
+                                data-bus-type="@bus.BusType"
+                                data-default-capacity="@(bus.BusType == BusType.Limousine ? 44 : 45)"
+                                selected="@selected">
+                            @bus.BusNumber - @bus.Company - @busTypeText
+                        </option>
+                    }
+                </select>
+                <span asp-validation-for="BusId" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="DriverId" class="control-label">Chọn Tài xế:</label>
+                <select asp-for="DriverId" asp-items="drivers" class="form-control">
+                    <option value="">-- Chọn Tài xế --</option>
+                </select>
+                <span asp-validation-for="DriverId" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="BusRouteId" class="control-label">Chọn tuyến:</label>
+                <select asp-for="BusRouteId" class="form-control" id="BusRouteId">
+                    <option value="" data-price="0">-- Chọn tuyến --</option>
+                    @foreach (var route in busRoutesList)
+                    {
+                        var selected = Model?.BusRouteId == route.Id ? "selected" : null;
+                        <option value="@route.Id" data-price="@OnlyNumber(route.Price)" selected="@selected">
+                            @route.DisplayName - Giá tuyến: @route.Price
+                        </option>
+                    }
+                </select>
+                <span asp-validation-for="BusRouteId" class="text-danger"></span>
+            </div>
+
+            <div class="row g-2 mb-3">
+                <div class="col-md-4">
+                    <label class="control-label">Giá trước điều chỉnh</label>
+                    <input type="text" id="BasePriceText" class="form-control" readonly />
+                </div>
+                <div class="col-md-4">
+                    <label class="control-label">Điều chỉnh giá (+/- %)</label>
+                    <input type="number" name="HolidayDiscountPercent" id="HolidayDiscountPercent" value="@holidayDiscountPercent" min="-100" max="300" step="0.01" class="form-control" />
+                    <small class="text-muted">Nhập số dương để tăng giá, ví dụ 20. Nhập số âm để giảm giá, ví dụ -10.</small>
+                    @Html.ValidationMessage("HolidayDiscountPercent", "", new { @class = "text-danger" })
+                </div>
+                <div class="col-md-4">
+                    <label class="control-label">Giá sau điều chỉnh</label>
+                    <input type="text" id="FinalPriceText" class="form-control" readonly />
+                </div>
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="ImageUrl" class="control-label">Ảnh chuyến:</label>
+                <input type="file" name="imageUrl" class="form-control" />
+                <span asp-validation-for="ImageUrl" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label class="control-label" for="DepartureTimeText">DepartureTime</label>
+                <input id="DepartureTimeText"
+                       name="DepartureTimeText"
+                       type="time"
+                       value="@departureTimeText"
+                       class="form-control"
+                       lang="vi-VN"
+                       min="00:00"
+                       max="23:59"
+                       step="60" />
+                <small class="form-text text-muted">Chọn giờ theo định dạng 24h, ví dụ: 20:00.</small>
+                @Html.ValidationMessage("DepartureTimeText", "", new { @class = "text-danger" })
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="DepartureDate" class="control-label">Từ ngày</label>
+                <input asp-for="DepartureDate" type="date" class="form-control" />
+                <span asp-validation-for="DepartureDate" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label class="control-label" for="DepartureEndDate">Đến ngày</label>
+                <input id="DepartureEndDate" name="DepartureEndDate" type="date" value="@departureEndDate" class="form-control" />
+                <small class="form-text text-muted">Nếu để trống, hệ thống chỉ tạo 1 chuyến cho ngày bắt đầu. Nếu chọn đến ngày, hệ thống sẽ tạo mỗi ngày 1 chuyến trong khoảng đó.</small>
+                @Html.ValidationMessage("DepartureEndDate", "", new { @class = "text-danger" })
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="Capacity" class="control-label"></label>
+                <input asp-for="Capacity" class="form-control" />
+                <span asp-validation-for="Capacity" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <input type="submit" value="Create" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-action="Index">Back to List</a>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        function formatCurrencyVnd(value) {
+            value = Number(value || 0);
+            return value.toLocaleString('vi-VN') + ' VND';
+        }
+
+        function updateTripPricePreview() {
+            var routeSelect = document.getElementById('BusRouteId');
+            var adjustmentInput = document.getElementById('HolidayDiscountPercent');
+            var selected = routeSelect.options[routeSelect.selectedIndex];
+            var basePrice = Number(selected ? selected.getAttribute('data-price') : 0) || 0;
+            var adjustment = Number(adjustmentInput.value || 0);
+            if (adjustment < -100) adjustment = -100;
+            if (adjustment > 300) adjustment = 300;
+            var finalPrice = Math.round(basePrice * (1 + adjustment / 100));
+            if (finalPrice < 0) finalPrice = 0;
+            document.getElementById('BasePriceText').value = formatCurrencyVnd(basePrice);
+            document.getElementById('FinalPriceText').value = formatCurrencyVnd(finalPrice);
+        }
+
+        function filterBusesByLayoutType() {
+            var typeSelect = document.getElementById('BusLayoutType');
+            var busSelect = document.getElementById('BusId');
+            var capacityInput = document.getElementById('Capacity');
+            var selectedType = typeSelect ? typeSelect.value : '';
+
+            Array.from(busSelect.options).forEach(function (option) {
+                if (!option.value) {
+                    option.hidden = false;
+                    return;
+                }
+
+                var busType = option.getAttribute('data-bus-type');
+                option.hidden = selectedType && busType !== selectedType;
+            });
+
+            var currentOption = busSelect.options[busSelect.selectedIndex];
+            if (currentOption && currentOption.hidden) {
+                busSelect.value = '';
+            }
+
+            var selectedOption = busSelect.options[busSelect.selectedIndex];
+            if (capacityInput && selectedOption && selectedOption.value && !capacityInput.value) {
+                capacityInput.value = selectedOption.getAttribute('data-default-capacity') || '';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('BusRouteId').addEventListener('change', updateTripPricePreview);
+            document.getElementById('HolidayDiscountPercent').addEventListener('input', updateTripPricePreview);
+
+            var typeSelect = document.getElementById('BusLayoutType');
+            var busSelect = document.getElementById('BusId');
+
+            if (typeSelect) {
+                typeSelect.addEventListener('change', function () {
+                    filterBusesByLayoutType();
+                    if (busSelect) {
+                        busSelect.value = '';
+                    }
+                });
+            }
+
+            if (busSelect) {
+                busSelect.addEventListener('change', function () {
+                    var option = busSelect.options[busSelect.selectedIndex];
+                    var capacityInput = document.getElementById('Capacity');
+                    if (capacityInput && option && option.value) {
+                        capacityInput.value = option.getAttribute('data-default-capacity') || capacityInput.value;
+                    }
+                });
+            }
+
+            filterBusesByLayoutType();
+            updateTripPricePreview();
+        });
+    </script>
+
+}
